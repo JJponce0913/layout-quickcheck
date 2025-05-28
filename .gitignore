@@ -18,3 +18,8 @@ config/*
 
 # Default directory for grizzly results
 results/*
+
+# Ignore pythong's venv nonsense
+bin/
+lib/
+include/

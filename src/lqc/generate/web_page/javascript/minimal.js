@@ -1,29 +1,24 @@
-function filterDimensions(obj, differing_dims) {{
-  // Only show dimensions that were different after reload
-  let ret = {{ }};
-  differing_dims.forEach((dim) => {{
-    ret[dim] = obj[dim];
-  }});
-  return ret;
+function printDimensions(node, fields) {{
+    let dims = node.getBoundingClientRect();
+    console.log("#" + node.id, Object.fromEntries(fields.map((x) => [x, dims[x]])));
 }}
 
 // Make the style changes to the page
 function makeStyleChanges() {{
-  {make_style_changes}
+    {make_style_changes}
+}}
+
+function fromScratchLayout() {{
+    document.documentElement.innerHTML = document.documentElement.innerHTML;
 }}
 
 function simpleRecreate() {{
-  // Make the style changes
-  makeStyleChanges();
+    console.log("Make changes and perform incremental layout");
+    makeStyleChanges();
+    {get_dimensions}
 
-  // Get the dimensions
-  console.log("Dimensions after style changes, before reload");
-  {get_dimensions}
-
-  // Reload the elements
-  document.documentElement.innerHTML = document.documentElement.innerHTML;
-
-  // Get the dimensions again
-  console.log("Dimensions after reload");
-  {get_dimensions}
+    // Reload the elements
+    console.log("Perform from scratch layout, below values should differ from above");
+    fromScratchLayout();
+    {get_dimensions}
 }}

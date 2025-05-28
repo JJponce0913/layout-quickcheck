@@ -24,7 +24,7 @@ def create(run_subject: RunSubject):
             style = ";".join(
                 [
                     f"{name}:{value}"
-                    for name, value in styles.get(element["id"], {}).items()
+                    for name, value in styles.get(element.get("id", ""), {}).items()
                 ]
             )
 
@@ -35,7 +35,7 @@ def create(run_subject: RunSubject):
                 for name, value in attributes_dict.items() if name in allowed_attributes
             )
 
-            element_id = element["id"]
+            element_id = element.get("id", "")
             children_string = reduce_children(element["children"])
             return body_string + formatWithIndent(current_template,
                 tag=tag,

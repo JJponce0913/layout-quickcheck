@@ -37,17 +37,9 @@ class StyleMap():
 
         Example Output: 
 
-            var abeofmwlekrifj = document.getElementById("abeofmwlekrifj");
-            if (abeofmwlekrifj) {
-                abeofmwlekrifj.style["min-width"] = "200px";
-                abeofmwlekrifj.style["margin-left"] = "10em";
-            }
-
-            var zomelfjeiwle = document.getElementById("zomelfjeiwle");
-            if (zomelfjeiwle) {
-                zomelfjeiwle.style["background-color"] = "blue";
-            }
-            
+            abeofmwlekrifj.style["min-width"] = "200px";
+            abeofmwlekrifj.style["margin-left"] = "10em";
+            zomelfjeiwle.style["background-color"] = "blue";
         """
         ret_string = ""
         for (elementId, styles) in self.map.items():
@@ -55,13 +47,7 @@ class StyleMap():
             elementStyles = list(styles.items())
             elementStyles.sort() # Sort alphabetical order by style name (to enforce the same order every time)
 
-            if elementStyles:
-                ret_string += f'var {elementId} = document.getElementById("{elementId}");\n'
-                ret_string += 'if (' + elementId + ') {\n'
-
-                for (style_name, style_value) in elementStyles:
-                    ret_string += f'  {elementId}.style["{style_name}"] = "{style_value}";\n'
-                
-                ret_string += '}\n'
+            for (style_name, style_value) in elementStyles:
+                ret_string += f'{elementId}.style["{style_name}"] = "{style_value}";\n'
 
         return ret_string
