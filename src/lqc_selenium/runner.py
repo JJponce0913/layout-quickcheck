@@ -11,6 +11,7 @@ from lqc.util.counter import Counter
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from lqc_selenium.selenium_harness.layout_tester import test_combination
+from lqc.config.helper import *
 
 
 def minify(target_browser, run_subject):
@@ -30,29 +31,32 @@ def minify(target_browser, run_subject):
     return (run_subject, run_result)
 
 
+
 def find_bugs(counter):
 
+    # Initialize the target browser for testing
     target_browser = TargetBrowser()
 
     while counter.should_continue():
 
-        # Stage 1 - Generate & Test
+        # Stage 1 - Generate a test subject and run it
         run_subject = generate_run_subject()
         (run_result, test_filepath) = test_combination(target_browser.getDriver(), run_subject, keep_file=True)
 
         if not run_result.isBug():
-            counter.incSuccess()
+            counter.incSuccess()  # No bug found
 
         else:
-            # Stage 2 - Minifying Bug
+            # Stage 2 - If a bug is detected, begin minification
             if run_result.type == BugType.PAGE_CRASH:
                 print("Found a page that crashes. Minifying...")
             else:
                 print("Found bug. Minifying...")
 
+            # Attempt to minimize the test case that triggered the bug
             (minified_run_subject, minified_run_result) = minify(target_browser, run_subject)
 
-            # False Positive Detection
+            # Check if the bug is reproducible or has meaningful changes
             if not minified_run_result.isBug():
                 print("False positive (could not reproduce)")
                 counter.incNoRepro()
@@ -61,29 +65,32 @@ def find_bugs(counter):
                 counter.incNoMod()
 
             else:
+                # Stage 3 - Bug confirmed, now test variants
                 counter.incError()
-
-                # Stage 3 - Test Variants
                 print("Minified bug. Testing variants...")
                 variants = test_variants(minified_run_subject)
+                set_config("./config/change.json")
 
+                # Save the bug report with relevant data
                 print("Variants tested. Saving bug report...")
-                url = save_bug_report(
+                url, json_url = save_bug_report(
                     variants,
                     minified_run_subject,
                     minified_run_result,
                     test_filepath
                 )
+                
+                set_zero(json_url,"./config/change.json")
                 print(url)
 
+        # Track number of tests run and display status
         counter.incTests()
         output = counter.getStatusString()
         if output:
             print(output)
 
-        # Clean Up
+        # Clean up temporary test file
         remove_file(test_filepath)
-
 
 DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
 
@@ -98,9 +105,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize Config
-    print(f"Using config file {args.config_file}")
-    conf = parse_config(args.config_file)
-    Config(conf)
+    set_config(args.config_file)
+
 
     # Logging - Target Variant
     target_variant = getTargetVariant()

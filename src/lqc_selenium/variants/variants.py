@@ -151,6 +151,8 @@ class FirefoxVariant(Variant):
         self.height = height
         self.headless = headless
         self.webdriver_path = webdriver_path or detectDriverPath("geckodriver", "Firefox webdriver_path")
+        print(f"Using Firefox WebDriver path: {self.webdriver_path}")
+
         self.binary_path = binary_path
 
     def __repr__(self):

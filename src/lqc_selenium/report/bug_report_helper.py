@@ -8,7 +8,7 @@ from lqc.generate.web_page.run_subject_converter import copyExternalJSFiles
 from lqc.model.constants import BugType
 from lqc.model.run_result import RunResult, RunResultLayoutBug
 from lqc.model.run_subject import RunSubject
-
+from lqc.config.helper import *
 
 def save_bug_report(
     variants,
@@ -59,4 +59,7 @@ def save_bug_report(
 
     # Return a URL
     url = "file://" + os.path.abspath(minified_bug)
-    return url
+    
+    return url, extract_change(url,bug_folder)
+
+

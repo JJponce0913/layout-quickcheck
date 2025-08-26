@@ -1,18 +1,19 @@
-
 {
     "paths": {
         "bug-reports-directory": "./bug_reports",
         "tmp-files-directory": "./tmp_generated_files"
     },
-
     "variants": [
-        {"type": "firefox"}
+        {
+            "type": "firefox",
+            "webdriver_path": "C:/Users/pika1/OneDrive/Documents/School/layout-quickcheck/geckodriver.exe",
+            "binary_path": "C:/Program Files/Mozilla Firefox/firefox.exe"
+
+        }
     ],
-
-
     "style-weights": {
         "content-visibility": 0,
         "writing-mode": 0,
-        "display": 100
+        "display": 0
     }
 }
