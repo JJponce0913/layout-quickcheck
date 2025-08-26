@@ -2,8 +2,9 @@ from lqc.config.config import Config, parse_config
 import os
 import json
 import re
+import sys
 
-def set_config(filename="./config/preset-default.config.json"):
+def set_config(filename="./config/change.json"):
     print(f"Using config file {filename}")
     Config(parse_config(filename))
 
@@ -56,7 +57,7 @@ def extract_change(html_path, folder_path, json_path="bug_reports/extracted_styl
     return json_path
 
 def extract_style_properties(func_text):
-    pattern = r'one\.style(?:\["([^"]+)"\]|\.([a-zA-Z\-]+))\s*='
+    pattern = r'[a-zA-Z0-9_]+\.style(?:\["([^"]+)"\]|\.([a-zA-Z\-]+))\s*='
     matches = re.findall(pattern, func_text)
     properties = []
     for prop1, prop2 in matches:
@@ -98,10 +99,15 @@ def get_latest(json_path):
     return latest_change
 
 #set all properties to zero
-def set_zero(func_text, config_path):
-    props = extract_style_properties(get_latest(func_text))
+def set_zero(json_path, config_path):
+    latest_change = get_latest(json_path)
+    props = extract_style_properties(latest_change) if latest_change else []
+    if not props:
+        print("EMPTY PROPERTY")
+        sys.exit(0)
     for p in props:
         print(f"Resetting {p}")
         update_style_weight(config_path, p, 0)
+
 
 

@@ -13,7 +13,7 @@ from lqc.config.config import Config, parse_config
 from lqc.generate.css import style_data
 from lqc.generate.css.style_generator import StyleGenerator
 
-DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+DEFAULT_CONFIG_FILE = "./config/change.json"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="Generate examples of style values")

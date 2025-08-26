@@ -1,6 +1,8 @@
 import uuid
 import lorem
 from random import random, choice
+from pathlib import Path
+
 from lqc.config.config import Config
 from lqc.generate.css.style_data import style_data
 from lqc.generate.css.style_generator import StyleGenerator
@@ -35,18 +37,29 @@ def is_supported_type(typedom_type, current_style):
 
 
 def generate_styles():
+
     styles = {}
     style_config = Config()
     style_value_generator = StyleGenerator()
+
+    output_lines = []
+
     for current_style in style_data["data"]:
         style_probability = style_config.getStyleProbability(current_style["name"])
+        output_lines.append(f"{current_style['name']}: {style_probability}")
+
         if random() < style_probability:
             gen = style_value_generator.pickGenerator(current_style)
             if gen:
                 style_name = current_style["name"]
                 style_value = gen()
                 styles[style_name] = style_value
+
+    #FLAG writing probabilites
+    Path("style_probabilities.txt").write_text("\n".join(output_lines), encoding="utf-8")
+
     return styles
+
 
 
 def generate_child():

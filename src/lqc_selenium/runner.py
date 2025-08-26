@@ -69,6 +69,8 @@ def find_bugs(counter):
                 counter.incError()
                 print("Minified bug. Testing variants...")
                 variants = test_variants(minified_run_subject)
+
+                #FLAG setting the json.
                 set_config("./config/change.json")
 
                 # Save the bug report with relevant data
@@ -92,7 +94,7 @@ def find_bugs(counter):
         # Clean up temporary test file
         remove_file(test_filepath)
 
-DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+DEFAULT_CONFIG_FILE = "./config/change.json"
 
 if __name__ == "__main__":
 
