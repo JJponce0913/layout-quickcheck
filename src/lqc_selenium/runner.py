@@ -14,6 +14,7 @@ from lqc_selenium.selenium_harness.layout_tester import test_combination
 
 
 def minify(target_browser, run_subject):
+    print("Minifying...")
     #print run_subject
     stepsFactory = MinifyStepFactory()
     while True:
@@ -29,6 +30,7 @@ def minify(target_browser, run_subject):
 
     # Create final representations of minified files
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
+    print("Minifying done.")
     return (run_subject, run_result)
 
 

@@ -8,7 +8,7 @@
     "variants": [
         {
             "type": "firefox",
-            "webdriver_path": "C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/geckodriver.exe",
+            "webdriver_path": "C:/Users/Jesus Javier Ponce/Documents/JJponce0913/layout-quickcheck/geckodriver.exe",
             "binary_path": "C:/Program Files/Mozilla Firefox/firefox.exe"
 
         }

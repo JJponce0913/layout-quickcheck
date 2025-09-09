@@ -37,6 +37,7 @@ def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
 
         # Make the style changes
         results =  webdriver.execute_script("return checkForBug()")
+        print(f"Results from JS diff: {results}")
         if results and len(results) > 0:
             return RunResultLayoutBug(results)
         else:
