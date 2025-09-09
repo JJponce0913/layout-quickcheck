@@ -14,14 +14,16 @@ from lqc_selenium.selenium_harness.layout_tester import test_combination
 
 
 def minify(target_browser, run_subject):
-
+    #print run_subject
     stepsFactory = MinifyStepFactory()
     while True:
         proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
         if proposed_run_subject == None:
             break
-        
+        #bug in test_combination?
         run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
+
+        #bug in is bug?
         if run_result.isBug():
             run_subject = proposed_run_subject
 

@@ -24,7 +24,7 @@ def test_combination(webdriver, run_subject: RunSubject, slow=False, keep_file=F
 
 
 def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
-
+    #bug in here?
     webdriver.get(f"{test_url}")
     try:
         timeout = 5

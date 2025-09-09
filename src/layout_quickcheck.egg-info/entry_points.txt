@@ -1,3 +1,2 @@
 [grizzly_adapters]
 lqc = lqc_grizzly.lqc_adapter:LayoutQuickCheckAdapter
-
