@@ -26,6 +26,8 @@ def save_subject(run_subject, stage):
 def minify(target_browser, run_subject):
     print(run_subject)
     save_subject(run_subject, "pre")
+    print("Minifying...")
+    #print run_subject
     stepsFactory = MinifyStepFactory()
     while True:
         proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
@@ -35,6 +37,7 @@ def minify(target_browser, run_subject):
         if run_result.isBug():
             run_subject = proposed_run_subject 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
+    print("Minifying done.")
     return (run_subject, run_result)
 
 
