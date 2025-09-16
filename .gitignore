@@ -23,3 +23,4 @@ results/*
 bin/
 lib/
 include/
+/pickles

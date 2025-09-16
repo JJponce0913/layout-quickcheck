@@ -25,7 +25,15 @@ class RunSubject:
         self.html_tree = html_tree
         self.base_styles = base_styles
         self.modified_styles = modified_styles
-
+    def __str__(self):
+        return (
+            "RunSubject(\n"
+            f"  Elements: {len(self.getElementIds())},\n"
+            f"  Base Styles: {len(self.base_styles.all_style_names())},\n"
+            f"  Modified Styles: {len(self.modified_styles.all_style_names())},\n"
+            f"  Styles Signature: {self.styles_signature()}\n"
+            ")"
+        )                             
     def deepcopy(self):
         return RunSubject(
             deepcopy(self.html_tree),

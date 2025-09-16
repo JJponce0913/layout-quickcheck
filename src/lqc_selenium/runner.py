@@ -11,25 +11,32 @@ from lqc.util.counter import Counter
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from lqc_selenium.selenium_harness.layout_tester import test_combination
+import pickle
+import inspect, lqc.model.run_subject as rsmod
+import os, uuid, pickle
+
+def save_subject(run_subject, stage):
+    os.makedirs("pickles", exist_ok=True)
+    fn = f"pickles/run_subject_{stage}_{uuid.uuid4().hex}.pkl"
+    with open(fn, "wb") as f:
+        pickle.dump(run_subject, f)
+    return fn
 
 
 def minify(target_browser, run_subject):
-    #print run_subject
+    print(run_subject)
+    save_subject(run_subject, "pre")
     stepsFactory = MinifyStepFactory()
     while True:
         proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
-        if proposed_run_subject == None:
+        if proposed_run_subject is None:
             break
-        #bug in test_combination?
         run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
-
-        #bug in is bug?
         if run_result.isBug():
-            run_subject = proposed_run_subject
-
-    # Create final representations of minified files
+            run_subject = proposed_run_subject 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     return (run_subject, run_result)
+
 
 
 def find_bugs(counter):

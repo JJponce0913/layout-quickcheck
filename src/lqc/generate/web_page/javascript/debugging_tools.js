@@ -70,6 +70,21 @@ function compareDimensions(dimensionsAfterModify, dimensionsAfterReload) {
       })
     }
   })
+  
+function printDifferences(differences) {
+  if (!differences || differences.length === 0) {
+    console.log("No layout differences detected.");
+    return;
+  }
+  differences.forEach(diff => {
+    console.log(`Element ${diff.id_tag} (${diff.tag}) has differing dimensions:`);
+    diff.differing_dims.forEach(attr => {
+      const mVal = diff.post_modify_dims[attr];
+      const rVal = diff.post_reload_dims[attr];
+      console.log(`   ${attr}: after modify = ${mVal}, after reload = ${rVal}`);
+    });
+  });
+}
 
   // Return structure
   // [{
@@ -117,19 +132,11 @@ function reload() {
 // Run this function to see the differences between modifying styles vs loading them fresh
 //
 function checkForBug() {
-
-  // console.log('Dimensions before application');
-  // dimensionsBeforeApplication = outputDimensions();
-
-  makeStyleChanges()
-
-  dimensionsAfterApplication = outputDimensions();
-  console.log('Dimensions after application', dimensionsAfterApplication);
-
+  makeStyleChanges();
+  const dimensionsAfterApplication = outputDimensions();
   document.documentElement.innerHTML = document.documentElement.innerHTML;
-
-  dimensionsAfterFreshLoad = outputDimensions();
-  console.log('Dimensions after fresh load', dimensionsAfterFreshLoad);
-
-  return compareDimensions(dimensionsAfterApplication, dimensionsAfterFreshLoad);
+  const dimensionsAfterFreshLoad = outputDimensions();
+  const diffs = compareDimensions(dimensionsAfterApplication, dimensionsAfterFreshLoad);
+  printDifferences(diffs);
+  return diffs;
 }
