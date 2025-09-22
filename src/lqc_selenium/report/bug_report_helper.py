@@ -14,7 +14,8 @@ def save_bug_report(
     variants,
     run_subject: RunSubject,
     run_result: RunResult,
-    original_filepath
+    original_filepath,
+    pickle_addre
 ):
     file_config = FileConfig()
     bug_folder = file_config.getTimestampBugReport()
@@ -28,6 +29,7 @@ def save_bug_report(
 
     # Copy the minimized bug
     minified_bug = os.path.join(bug_folder, "minified_bug.html")
+    print(f"Saving minimized bug to {minified_bug}")
     save_as_web_page(run_subject, minified_bug, run_result=run_result)
     copyExternalJSFiles(bug_folder)
 
@@ -47,6 +49,7 @@ def save_bug_report(
         "modified_styles": modified_styles,
         "variants": variants,
         "run_subject": run_subject,
+        "pickle_addre": pickle_addre
     }
     if isinstance(run_result, RunResultLayoutBug):
         json_data["differences"] = run_result.element_dimensions

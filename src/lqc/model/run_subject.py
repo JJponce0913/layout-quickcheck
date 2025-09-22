@@ -42,9 +42,10 @@ class RunSubject:
         )
     
     def removeElementById(self, id):
-        self.html_tree.removeElementById(id)
+        #BUG Loop over all elements under the id
         self.base_styles.removeById(id)
         self.modified_styles.removeById(id)
+        self.html_tree.removeElementById(id)
     
     def getElementIds(self):
         return self.html_tree.getElementIds() | self.base_styles.getElementIds() | self.modified_styles.getElementIds()

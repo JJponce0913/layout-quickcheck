@@ -71,6 +71,19 @@ function compareDimensions(dimensionsAfterModify, dimensionsAfterReload) {
     }
   })
   
+
+
+  // Return structure
+  // [{
+  //   id: one
+  //   tag: div
+  //   id_tag: one<div>
+  //   differing_dims: ['x', 'left'],
+  //   post_modify_dims: {x: 100, left: 10}
+  //   post_reload_dims: {x: 120, left: 15}
+  // }, ...]
+  return differences
+}
 function printDifferences(differences) {
   if (!differences || differences.length === 0) {
     console.log("No layout differences detected.");
@@ -85,19 +98,6 @@ function printDifferences(differences) {
     });
   });
 }
-
-  // Return structure
-  // [{
-  //   id: one
-  //   tag: div
-  //   id_tag: one<div>
-  //   differing_dims: ['x', 'left'],
-  //   post_modify_dims: {x: 100, left: 10}
-  //   post_reload_dims: {x: 120, left: 15}
-  // }, ...]
-  return differences
-}
-
 // Get all element dimensions on the page
 // Output to be consumed by compareDimensions()
 //

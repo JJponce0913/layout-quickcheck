@@ -24,3 +24,8 @@ bin/
 lib/
 include/
 /pickles
+config/preset-default.config.json
+testminify/000000.html
+/testminify
+config/preset-default.config.json
+t.txt

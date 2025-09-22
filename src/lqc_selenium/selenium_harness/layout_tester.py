@@ -23,29 +23,41 @@ def test_combination(webdriver, run_subject: RunSubject, slow=False, keep_file=F
         return run_result, test_filepath
 
 
+import json
+
+import json
+
 def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
-    #bug in here?
     webdriver.get(f"{test_url}")
     try:
         timeout = 5
         poll_frequency = 0.001
-
-        # Wait until body element is loaded
         WebDriverWait(webdriver, timeout, poll_frequency=poll_frequency).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        
-        if slow: time.sleep(0.5)
-
-        # Make the style changes
-        results =  webdriver.execute_script("return checkForBug()")
-        print(f"Results from JS diff: {results}")
+        if slow:
+            time.sleep(0.5)
+        results = webdriver.execute_script("return checkForBug()")
+        try:
+            print("Diff:\n" + json.dumps(results, indent=2, default=str))
+        except TypeError:
+            print(f"Diff: {results}")
         if results and len(results) > 0:
+            print("Outcome: BUG")
             return RunResultLayoutBug(results)
         else:
+            print("Outcome: PASS")
             return RunResultPass()
-
     except TimeoutException:
+        print("Outcome: TIMEOUT")
         print("Failed to load test page due to timeout")
         return None
-    except WebDriverException:
+    except WebDriverException as e:
+        print("Outcome: CRASH")
+        print(f"WebDriverException: {e}")
         return RunResultCrash()
+    except Exception as e:
+        print("Outcome: ERROR")
+        print(f"Unhandled exception: {e}")
+        raise
+
+
 

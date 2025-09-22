@@ -8,12 +8,14 @@ from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
 from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc.util.counter import Counter
+from lqc.generate.web_page.create import save_as_web_page
+
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 import pickle
 import inspect, lqc.model.run_subject as rsmod
-import os, uuid, pickle
+import os, uuid, pickle, re
 
 def save_subject(run_subject, stage):
     os.makedirs("pickles", exist_ok=True)
@@ -22,23 +24,79 @@ def save_subject(run_subject, stage):
         pickle.dump(run_subject, f)
     return fn
 
+def _ensure_dir(d):
+    if not os.path.isdir(d):
+        os.makedirs(d, exist_ok=True)
 
-def minify(target_browser, run_subject):
-    print(run_subject)
-    save_subject(run_subject, "pre")
+def _next_html_index(d):
+    _ensure_dir(d)
+    nums = []
+    pat = re.compile(r"^(\d+)\.html$")
+    for f in os.listdir(d):
+        m = pat.match(f)
+        if m:
+            nums.append(int(m.group(1)))
+    return (max(nums) + 1) if nums else 0
+
+def _save_step_html(run_subject, folder, idx):
+    path = os.path.join(folder, f"{idx:06d}.html")
+    save_as_web_page(run_subject, path)
+    return idx + 1
+
+def minify_debug(target_browser, run_subject):
+    folder = "testminify"
+    idx = _next_html_index(folder)
+    pickle_addre = save_subject(run_subject, "pre")
+    print(f"STEP {idx:06d} PRE")
+    idx = _save_step_html(run_subject, folder, idx)
     print("Minifying...")
-    #print run_subject
     stepsFactory = MinifyStepFactory()
     while True:
         proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
         if proposed_run_subject is None:
             break
+        print(f"STEP {idx:06d} PROPOSED")
+        idx = _save_step_html(proposed_run_subject, folder, idx)
         run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
+        state = "BUG" if run_result.isBug() else "PASS"
+        print(f"STEP {idx-1:06d} RESULT {state}")
         if run_result.isBug():
-            run_subject = proposed_run_subject 
+            run_subject = proposed_run_subject
+            print(f"STEP {idx:06d} ACCEPTED")
+            idx = _save_step_html(run_subject, folder, idx)
+        else:
+            print(f"STEP {idx:06d} REJECTED")
+    run_result, _ = test_combination(target_browser.getDriver(), run_subject)
+    print(f"STEP {idx:06d} FINAL")
+    idx = _save_step_html(run_subject, folder, idx)
+    print("Minifying done.")
+    return (run_subject, run_result, pickle_addre)
+
+def minify(target_browser, run_subject):
+    pickle_addre= save_subject(run_subject, "pre")
+    save_as_web_page(run_subject, "test_pre.html")
+    print("Minifying...")
+    stepsFactory = MinifyStepFactory()
+
+    # Keep applying minimization steps until no more are available
+    while True:
+        # Get the next candidate minimized version of run_subject
+        temp_run_subject = stepsFactory.next_minimization_step(run_subject)
+        # If there are no more steps, exit the loop
+        if temp_run_subject is None:
+            print("No more minimization steps available.")
+            break
+
+        # Test the proposed minimized subject in the target browser
+        run_result, *_ = test_combination(target_browser.getDriver(), temp_run_subject)
+
+        # If the minimized subject still triggers the bug, accept it as the new subject
+        if run_result.isBug():
+            run_subject = temp_run_subject
+
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     print("Minifying done.")
-    return (run_subject, run_result)
+    return (run_subject, run_result,pickle_addre)
 
 
 
@@ -51,7 +109,7 @@ def find_bugs(counter):
         # Stage 1 - Generate & Test
         run_subject = generate_run_subject()
         (run_result, test_filepath) = test_combination(target_browser.getDriver(), run_subject, keep_file=True)
-
+        
         if not run_result.isBug():
             counter.incSuccess()
 
@@ -59,10 +117,11 @@ def find_bugs(counter):
             # Stage 2 - Minifying Bug
             if run_result.type == BugType.PAGE_CRASH:
                 print("Found a page that crashes. Minifying...")
+                
             else:
                 print("Found bug. Minifying...")
 
-            (minified_run_subject, minified_run_result) = minify(target_browser, run_subject)
+            (minified_run_subject, minified_run_result,pickle_addre) = minify(target_browser, run_subject)
 
             # False Positive Detection
             if not minified_run_result.isBug():
@@ -84,7 +143,8 @@ def find_bugs(counter):
                     variants,
                     minified_run_subject,
                     minified_run_result,
-                    test_filepath
+                    test_filepath,
+                    pickle_addre
                 )
                 print(url)
 

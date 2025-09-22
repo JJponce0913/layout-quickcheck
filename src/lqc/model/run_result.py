@@ -25,6 +25,7 @@ class RunResultCrash(RunResult):
         super().__init__(BugType.PAGE_CRASH)
 
     def isBug(self):
+        #BUG Consider Js Errors as non-bugs
         return True
 
 
