@@ -1,0 +1,115 @@
+{
+  "root": "C:\\Users\\Jesus Javier Ponce\\Documents\\JJponce0913\\layout-quickcheck\\bug_reports",
+  "combined_counts": [
+    {
+      "property": "display",
+      "value": "inline",
+      "count": 122
+    },
+    {
+      "property": "display",
+      "value": "table-column-group",
+      "count": 13
+    },
+    {
+      "property": "text-combine-upright",
+      "value": "all",
+      "count": 3
+    },
+    {
+      "property": "display",
+      "value": "inline-block",
+      "count": 2
+    },
+    {
+      "property": "table-layout",
+      "value": "fixed",
+      "count": 2
+    },
+    {
+      "property": "display",
+      "value": "contents",
+      "count": 2
+    },
+    {
+      "property": "float",
+      "value": "left",
+      "count": 2
+    },
+    {
+      "property": "display",
+      "value": "-webkit-inline-box",
+      "count": 2
+    },
+    {
+      "property": "display",
+      "value": "table-column",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "grid",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "inline-grid",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "-webkit-box",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "table-footer-group",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "inline-table",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "table",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "inline-flex",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "block",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "table-caption",
+      "count": 1
+    },
+    {
+      "property": "white-space",
+      "value": "break-spaces",
+      "count": 1
+    },
+    {
+      "property": "quotes",
+      "value": "none",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "list-item",
+      "count": 1
+    },
+    {
+      "property": "display",
+      "value": "flex",
+      "count": 1
+    }
+  ]
+}

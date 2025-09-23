@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Layout QuickCheck</title>
+    <script>
+      function printDimensions(node, fields) {
+          let dims = node.getBoundingClientRect();
+          console.log("#" + node.id, Object.fromEntries(fields.map((x) => [x, dims[x]])));
+      }
+      
+      // Make the style changes to the page
+      function makeStyleChanges() {
+          two.style["display"] = "table-column";
+          
+      }
+      
+      function fromScratchLayout() {
+          document.documentElement.innerHTML = document.documentElement.innerHTML;
+      }
+      
+      function simpleRecreate() {
+          console.log("Make changes and perform incremental layout");
+          makeStyleChanges();
+          printDimensions(one, ["right", "width"]);
+          
+      
+          // Reload the elements
+          console.log("Perform from scratch layout, below values should differ from above");
+          fromScratchLayout();
+          printDimensions(one, ["right", "width"]);
+          
+      }
+      
+    </script>
+
+    <!-- For a minimal version of this bug, remove all optional JS Files -->
+    <!-- Start: Optional JS Files -->
+    <script src="debugging_tools.js"></script>
+    
+    <!-- End: Optional JS Files -->
+  </head>
+
+  <body>
+    Numquam magnam tempora magnam consectetur quiquia magnam.
+    <div style="display:table-cell;text-indent:20px;background-color:green"  id="one">
+      
+      <div style="background-color:black"  id="two">
+        
+      </div>
+      
+    </div>
+    
+    <div style="position:fixed;top:10px;right:10px;padding:5px;z-index:9999;background:rgba(0, 0, 0, .75)"  id="lqc_dev_controls">
+      
+      <button style="" onclick='makeStyleChanges()' id="">
+        Incremental
+      </button>
+      
+      <button style="" onclick='fromScratchLayout()' id="">
+        From Scratch
+      </button>
+      
+    </div>
+    
+  </body>
+
+</html>

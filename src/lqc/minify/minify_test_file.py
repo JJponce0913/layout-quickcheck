@@ -178,7 +178,7 @@ def Enhance_BackgroundColorPerElement(run_subject):
             else:
                 proposed_run_subject.base_styles.map[elementId] = {'background-color': background_color}
             return proposed_run_subject
-
+ 
         yield giveMinSize
 
 

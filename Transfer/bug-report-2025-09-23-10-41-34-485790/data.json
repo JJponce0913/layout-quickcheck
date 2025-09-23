@@ -1,0 +1,255 @@
+{
+    "datetime": "2025-09-23T10:41:34.514048",
+    "bug_type": "Under Invalidation",
+    "styles_used": [
+        "background",
+        "background-color",
+        "display:grid",
+        "display:table-column",
+        "margin-block-start",
+        "min-height",
+        "min-width",
+        "padding",
+        "position",
+        "right",
+        "top",
+        "z-index"
+    ],
+    "styles_used_string": "background,background-color,display:grid,display:table-column,margin-block-start,min-height,min-width,padding,position,right,top,z-index",
+    "base_styles": [
+        "top",
+        "min-height",
+        "padding",
+        "display:table-column",
+        "min-width",
+        "background",
+        "right",
+        "position",
+        "background-color",
+        "z-index",
+        "margin-block-start"
+    ],
+    "modified_styles": [
+        "display:grid"
+    ],
+    "variants": {
+        "Test Variant Summary": {
+            "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)": true
+        },
+        "Test Variant Details": [
+            {
+                "description": "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)",
+                "browser": "Firefox",
+                "browser_version": "143.0.1",
+                "is_original_variant": true,
+                "window_size": {
+                    "width": 1000,
+                    "height": 1000
+                },
+                "diff_method": "Python",
+                "forced_slow": [
+                    "force_slow"
+                ],
+                "os_name": "Windows",
+                "os_details": "Windows-11-10.0.26100-SP0",
+                "bug_detected": true
+            }
+        ]
+    },
+    "run_subject": {
+        "html_tree": {
+            "tree": [
+                {
+                    "tag": "div",
+                    "children": [
+                        {
+                            "tag": "<text>",
+                            "value": "Dolorem etincidunt adipisci adipisci amet porro aliquam est.",
+                            "children": []
+                        }
+                    ],
+                    "id": "two"
+                },
+                {
+                    "tag": "div",
+                    "children": [],
+                    "id": "three"
+                },
+                {
+                    "tag": "div",
+                    "children": [],
+                    "id": "one"
+                },
+                {
+                    "id": "lqc_dev_controls",
+                    "tag": "div",
+                    "children": [
+                        {
+                            "tag": "button",
+                            "attributes": {
+                                "onclick": "makeStyleChanges()"
+                            },
+                            "children": [
+                                {
+                                    "tag": "<text>",
+                                    "value": "Incremental"
+                                }
+                            ]
+                        },
+                        {
+                            "tag": "button",
+                            "attributes": {
+                                "onclick": "fromScratchLayout()"
+                            },
+                            "children": [
+                                {
+                                    "tag": "<text>",
+                                    "value": "From Scratch"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "base_styles": {
+            "map": {
+                "one": {
+                    "min-width": "50px",
+                    "min-height": "50px",
+                    "background-color": "green"
+                },
+                "two": {
+                    "display": "table-column",
+                    "min-width": "50px",
+                    "min-height": "50px",
+                    "background-color": "red"
+                },
+                "three": {
+                    "margin-block-start": "20px",
+                    "min-width": "50px",
+                    "min-height": "50px",
+                    "background-color": "green"
+                },
+                "lqc_dev_controls": {
+                    "position": "fixed",
+                    "top": "10px",
+                    "right": "10px",
+                    "padding": "5px",
+                    "z-index": "9999",
+                    "background": "rgba(0, 0, 0, .75)"
+                }
+            }
+        },
+        "modified_styles": {
+            "map": {
+                "three": {
+                    "display": "grid"
+                }
+            }
+        }
+    },
+    "pickle_addre": "pickles/run_subject_pre_f1be5565e3e6481695a06e27f325abb8.pkl",
+    "differences": [
+        {
+            "differing_dims": [
+                "bottom",
+                "height"
+            ],
+            "id": "",
+            "id_tag": "UnknownID<html>",
+            "post_modify_dims": {
+                "bottom": 128,
+                "height": 128
+            },
+            "post_reload_dims": {
+                "bottom": 136,
+                "height": 136
+            },
+            "tag": "html"
+        },
+        {
+            "differing_dims": [
+                "y",
+                "top",
+                "bottom",
+                "height"
+            ],
+            "id": "",
+            "id_tag": "UnknownID<body>",
+            "post_modify_dims": {
+                "bottom": 120,
+                "height": 100,
+                "top": 20,
+                "y": 20
+            },
+            "post_reload_dims": {
+                "bottom": 128,
+                "height": 120,
+                "top": 8,
+                "y": 8
+            },
+            "tag": "body"
+        },
+        {
+            "differing_dims": [
+                "y",
+                "top",
+                "bottom"
+            ],
+            "id": "two",
+            "id_tag": "two<div>",
+            "post_modify_dims": {
+                "bottom": 70,
+                "top": 70,
+                "y": 70
+            },
+            "post_reload_dims": {
+                "bottom": 8,
+                "top": 8,
+                "y": 8
+            },
+            "tag": "div"
+        },
+        {
+            "differing_dims": [
+                "y",
+                "top",
+                "bottom"
+            ],
+            "id": "three",
+            "id_tag": "three<div>",
+            "post_modify_dims": {
+                "bottom": 70,
+                "top": 20,
+                "y": 20
+            },
+            "post_reload_dims": {
+                "bottom": 78,
+                "top": 28,
+                "y": 28
+            },
+            "tag": "div"
+        },
+        {
+            "differing_dims": [
+                "y",
+                "top",
+                "bottom"
+            ],
+            "id": "one",
+            "id_tag": "one<div>",
+            "post_modify_dims": {
+                "bottom": 120,
+                "top": 70,
+                "y": 70
+            },
+            "post_reload_dims": {
+                "bottom": 128,
+                "top": 78,
+                "y": 78
+            },
+            "tag": "div"
+        }
+    ]
+}

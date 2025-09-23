@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Layout QuickCheck</title>
+    <script>
+      function printDimensions(node, fields) {
+          let dims = node.getBoundingClientRect();
+          console.log("#" + node.id, Object.fromEntries(fields.map((x) => [x, dims[x]])));
+      }
+      
+      // Make the style changes to the page
+      function makeStyleChanges() {
+          one.style["display"] = "inline";
+          
+      }
+      
+      function fromScratchLayout() {
+          document.documentElement.innerHTML = document.documentElement.innerHTML;
+      }
+      
+      function simpleRecreate() {
+          console.log("Make changes and perform incremental layout");
+          makeStyleChanges();
+          printDimensions(one, ["x", "left", "right"]);
+          
+      
+          // Reload the elements
+          console.log("Perform from scratch layout, below values should differ from above");
+          fromScratchLayout();
+          printDimensions(one, ["x", "left", "right"]);
+          
+      }
+      
+    </script>
+
+    <!-- For a minimal version of this bug, remove all optional JS Files -->
+    <!-- Start: Optional JS Files -->
+    <script src="debugging_tools.js"></script>
+    
+    <!-- End: Optional JS Files -->
+  </head>
+
+  <body>
+    Amet ipsum est amet dolor modi quaerat.Quiquia labore dolore dolor voluptatem eius amet.
+    <div style="margin-right:127%;min-width:50px;min-height:50px;background-color:black"  id="one">
+      
+    </div>
+    
+    <div style="position:fixed;top:10px;right:10px;padding:5px;z-index:9999;background:rgba(0, 0, 0, .75)"  id="lqc_dev_controls">
+      
+      <button style="" onclick='makeStyleChanges()' id="">
+        Incremental
+      </button>
+      
+      <button style="" onclick='fromScratchLayout()' id="">
+        From Scratch
+      </button>
+      
+    </div>
+    
+  </body>
+
+</html>

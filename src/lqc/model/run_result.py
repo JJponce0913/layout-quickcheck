@@ -19,14 +19,21 @@ class RunResultPass(RunResult):
         return False
 
 
-class RunResultCrash(RunResult):
+""" class RunResultCrash(RunResult):
 
     def __init__(self):
         super().__init__(BugType.PAGE_CRASH)
 
     def isBug(self):
         #BUG Consider Js Errors as non-bugs
-        return True
+        return True """
+class RunResultCrash(RunResult):
+
+    def __init__(self):
+        super().__init__(BugType.PAGE_CRASH)
+
+    def isBug(self):
+        return self.type == BugType.PAGE_CRASH
 
 
 class RunResultLayoutBug(RunResult):

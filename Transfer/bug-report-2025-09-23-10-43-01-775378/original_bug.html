@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Layout QuickCheck</title>
+    <script>
+      function printDimensions(node, fields) {
+          let dims = node.getBoundingClientRect();
+          console.log("#" + node.id, Object.fromEntries(fields.map((x) => [x, dims[x]])));
+      }
+      
+      // Make the style changes to the page
+      function makeStyleChanges() {
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["baseline-shift"] = "168%";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["border-bottom-color"] = "currentcolor";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["border-collapse"] = "collapse";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["break-before"] = "verso";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["clip"] = "auto";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["counter-reset"] = "none";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["cy"] = "37%";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["display"] = "inline";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["grid-auto-rows"] = "min-content";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["inset-block-end"] = "-1028pt";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["line-height"] = "-92%";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["list-style-image"] = "none";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["margin-right"] = "127%";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["max-height"] = "none";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["min-block-size"] = "116%";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["mix-blend-mode"] = "multiply";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["outline-color"] = "currentcolor";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["overflow-wrap"] = "break-word";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["overflow-y"] = "hidden";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["padding-block-end"] = "1200cap";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["padding-top"] = "+1968vw";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["scroll-padding-inline-start"] = "1404ic";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["stroke-width"] = "117%";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["text-anchor"] = "start";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["text-decoration-style"] = "dotted";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["transform-style"] = "preserve-3d";
+          zjipbpbdfdcnpszoacsasnhhfjhaonpz.style["vector-effect"] = "none";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["animation-play-state"] = "paused";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["border-bottom-right-radius"] = "109%";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["border-image-slice"] = "-148%";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["border-left-color"] = "currentcolor";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["border-right-color"] = "currentcolor";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["column-span"] = "all";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["cy"] = "-93%";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["display"] = "inline-grid";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["empty-cells"] = "hide";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["flex-direction"] = "row";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["grid-template-areas"] = "none";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["grid-template-columns"] = "52fr 1311px 48fr 91fr -117% 70% 140%";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["height"] = "621cm";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["inset-block-start"] = "52%";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["margin-right"] = "+313lh";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["max-inline-size"] = "-1%";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["offset-anchor"] = "auto";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["overflow-wrap"] = "normal";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["overscroll-behavior-x"] = "contain";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["stroke-width"] = "69%";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["text-combine-upright"] = "all";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["text-rendering"] = "optimizespeed";
+          krafaffvvaikqufqfeaeqakfcivvfari.style["unicode-bidi"] = "isolate";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["animation-name"] = "none";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["background-blend-mode"] = "screen";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["background-color"] = "currentcolor";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["clip"] = "auto";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["color-interpolation"] = "srgb";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["counter-set"] = "none";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["display"] = "contents";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["float"] = "inline-start";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["font-kerning"] = "none";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["grid-column-end"] = "span 10";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["image-rendering"] = "optimizespeed";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["letter-spacing"] = "+1231ex";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["list-style-position"] = "inside";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["margin-bottom"] = "988lh";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["padding-bottom"] = "-137%";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["scroll-padding-block-start"] = "auto";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["scroll-snap-align"] = "start";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["text-align-last"] = "right";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["text-shadow"] = "none";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["text-underline-offset"] = "654";
+          adcdygzqywgggaaqwuywfydaqagqffaz.style["vertical-align"] = "super";
+          
+      }
+      
+      function fromScratchLayout() {
+          document.documentElement.innerHTML = document.documentElement.innerHTML;
+      }
+      
+      function simpleRecreate() {
+          console.log("Make changes and perform incremental layout");
+          makeStyleChanges();
+          printDimensions(zjipbpbdfdcnpszoacsasnhhfjhaonpz, ["x", "y", "top", "bottom"]);
+          printDimensions(krafaffvvaikqufqfeaeqakfcivvfari, ["x", "y", "top", "bottom"]);
+          printDimensions(adcdygzqywgggaaqwuywfydaqagqffaz, ["x", "y", "top", "bottom"]);
+          
+      
+          // Reload the elements
+          console.log("Perform from scratch layout, below values should differ from above");
+          fromScratchLayout();
+          printDimensions(zjipbpbdfdcnpszoacsasnhhfjhaonpz, ["x", "y", "top", "bottom"]);
+          printDimensions(krafaffvvaikqufqfeaeqakfcivvfari, ["x", "y", "top", "bottom"]);
+          printDimensions(adcdygzqywgggaaqwuywfydaqagqffaz, ["x", "y", "top", "bottom"]);
+          
+      }
+      
+    </script>
+
+    <!-- For a minimal version of this bug, remove all optional JS Files -->
+    <!-- Start: Optional JS Files -->
+    <script src="debugging_tools.js"></script>
+    
+    <!-- End: Optional JS Files -->
+  </head>
+
+  <body>
+    Amet ipsum est amet dolor modi quaerat.Quiquia labore dolore dolor voluptatem eius amet.
+    <div style="transition-property:none;direction:ltr;font-variant-numeric:proportional-nums;text-orientation:upright;background-image:auto;border-image-source:none;border-right-style:dotted;border-top-color:currentcolor;border-top-style:none;box-sizing:border-box;break-before:avoid;clip-rule:evenodd;display:inline-grid;max-height:0%;mix-blend-mode:screen;offset-distance:-185%;overflow-anchor:auto;overflow-x:auto;overscroll-behavior-y:none;padding-left:123%;r:1170vmax;shape-rendering:auto;text-indent:149pc;text-shadow:none;transform-style:preserve-3d;column-rule-style:dotted;margin-block-end:379lh;inset-inline-end:99%;inset-block-start:-112%"  id="zjipbpbdfdcnpszoacsasnhhfjhaonpz">
+      
+      <div style="animation-fill-mode:backwards;animation-name:none;color:currentcolor;font-style:oblique;font-weight:normal;background-image:auto;border-image-repeat:space;border-left-color:currentcolor;display:table-header-group;float:inline-end;margin-right:1264rem;min-height:2%;mix-blend-mode:color-burn;offset-position:auto;overscroll-behavior-y:contain;resize:both;stroke-linejoin:miter;text-indent:152%;column-rule-color:currentcolor;column-rule-width:medium;padding-inline-end:+947vmax;padding-block-end:+231rem"  id="krafaffvvaikqufqfeaeqakfcivvfari">
+        Est labore consectetur neque sit labore non eius. Adipisci labore amet aliquam etincidunt ipsum dolorem est. Velit tempora sed neque sit numquam velit.
+      </div>
+      
+      <div style="animation-play-state:paused;animation-timing-function:jump-none;backdrop-filter:none;background-color:currentcolor;baseline-shift:super;border-right-width:-959in;border-top-color:currentcolor;display:inline-block;dominant-baseline:central;grid-row-start:-2;lighting-color:currentcolor;list-style-position:outside;margin-right:-123%;mask-type:luminance;overflow-x:overlay;padding-top:+137vmin;scroll-margin-right:1416pt;text-decoration-style:dotted;text-overflow:ellipsis;visibility:hidden;column-rule-width:thick;width:max-content"  id="adcdygzqywgggaaqwuywfydaqagqffaz">
+        
+      </div>
+      
+    </div>
+    
+  </body>
+
+</html>

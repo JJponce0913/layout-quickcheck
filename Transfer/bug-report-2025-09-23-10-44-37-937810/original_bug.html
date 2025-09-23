@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Layout QuickCheck</title>
+    <script>
+      function printDimensions(node, fields) {
+          let dims = node.getBoundingClientRect();
+          console.log("#" + node.id, Object.fromEntries(fields.map((x) => [x, dims[x]])));
+      }
+      
+      // Make the style changes to the page
+      function makeStyleChanges() {
+          bewstghcwsbghgoebddcoeebetcwcefo.style["animation-timing-function"] = "jump-start";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["background-color"] = "currentcolor";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["background-origin"] = "border-box";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["border-top-color"] = "currentcolor";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["break-before"] = "auto";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["caret-color"] = "currentcolor";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["color-interpolation"] = "srgb";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["column-gap"] = "-12%";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["column-span"] = "none";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["display"] = "inline";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["dominant-baseline"] = "auto";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["grid-row-start"] = "auto";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["line-break"] = "strict";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["list-style-position"] = "inside";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["margin-block-start"] = "1661cm";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["min-block-size"] = "71vh";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["offset-distance"] = "1900ex";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["offset-position"] = "auto";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["origin-trial-test-property"] = "normal";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["padding-inline-end"] = "166%";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["paint-order"] = "normal";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["scroll-snap-align"] = "end";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["scrollbar-gutter"] = "always";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["text-combine-upright"] = "none";
+          bewstghcwsbghgoebddcoeebetcwcefo.style["z-index"] = "auto";
+          
+      }
+      
+      function fromScratchLayout() {
+          document.documentElement.innerHTML = document.documentElement.innerHTML;
+      }
+      
+      function simpleRecreate() {
+          console.log("Make changes and perform incremental layout");
+          makeStyleChanges();
+          printDimensions(bewstghcwsbghgoebddcoeebetcwcefo, ["x", "y", "top", "bottom"]);
+          
+      
+          // Reload the elements
+          console.log("Perform from scratch layout, below values should differ from above");
+          fromScratchLayout();
+          printDimensions(bewstghcwsbghgoebddcoeebetcwcefo, ["x", "y", "top", "bottom"]);
+          
+      }
+      
+    </script>
+
+    <!-- For a minimal version of this bug, remove all optional JS Files -->
+    <!-- Start: Optional JS Files -->
+    <script src="debugging_tools.js"></script>
+    
+    <!-- End: Optional JS Files -->
+  </head>
+
+  <body>
+    Adipisci non dolore etincidunt.
+    <div style="direction:ltr;font-stretch:semi-condensed;font-feature-settings:normal;alignment-baseline:central;background-blend-mode:overlay;background-origin:padding-box;border-bottom-style:double;break-after:recto;clip-path:none;counter-set:none;cy:-41vw;display:block;flood-color:currentcolor;marker-mid:none;outline-offset:299Q;outline-style:dotted;overflow-x:auto;perspective:none;right:-13%;scroll-margin-inline-end:1840rlh;scroll-padding-inline-end:996rlh;table-layout:fixed;top:155%;vertical-align:baseline;column-width:+135mozmm;inline-size:-153%;margin-block-start:1344ch"  id="bewstghcwsbghgoebddcoeebetcwcefo">
+      
+    </div>
+    
+  </body>
+
+</html>

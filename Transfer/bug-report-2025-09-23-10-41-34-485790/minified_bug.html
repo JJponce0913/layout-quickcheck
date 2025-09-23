@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Layout QuickCheck</title>
+    <script>
+      function printDimensions(node, fields) {
+          let dims = node.getBoundingClientRect();
+          console.log("#" + node.id, Object.fromEntries(fields.map((x) => [x, dims[x]])));
+      }
+      
+      // Make the style changes to the page
+      function makeStyleChanges() {
+          three.style["display"] = "grid";
+          
+      }
+      
+      function fromScratchLayout() {
+          document.documentElement.innerHTML = document.documentElement.innerHTML;
+      }
+      
+      function simpleRecreate() {
+          console.log("Make changes and perform incremental layout");
+          makeStyleChanges();
+          printDimensions(two, ["y", "top", "bottom"]);
+          printDimensions(three, ["y", "top", "bottom"]);
+          printDimensions(one, ["y", "top", "bottom"]);
+          
+      
+          // Reload the elements
+          console.log("Perform from scratch layout, below values should differ from above");
+          fromScratchLayout();
+          printDimensions(two, ["y", "top", "bottom"]);
+          printDimensions(three, ["y", "top", "bottom"]);
+          printDimensions(one, ["y", "top", "bottom"]);
+          
+      }
+      
+    </script>
+
+    <!-- For a minimal version of this bug, remove all optional JS Files -->
+    <!-- Start: Optional JS Files -->
+    <script src="debugging_tools.js"></script>
+    
+    <!-- End: Optional JS Files -->
+  </head>
+
+  <body>
+    
+    <div style="display:table-column;min-width:50px;min-height:50px;background-color:red"  id="two">
+      Dolorem etincidunt adipisci adipisci amet porro aliquam est.
+    </div>
+    
+    <div style="margin-block-start:20px;min-width:50px;min-height:50px;background-color:green"  id="three">
+      
+    </div>
+    
+    <div style="min-width:50px;min-height:50px;background-color:green"  id="one">
+      
+    </div>
+    
+    <div style="position:fixed;top:10px;right:10px;padding:5px;z-index:9999;background:rgba(0, 0, 0, .75)"  id="lqc_dev_controls">
+      
+      <button style="" onclick='makeStyleChanges()' id="">
+        Incremental
+      </button>
+      
+      <button style="" onclick='fromScratchLayout()' id="">
+        From Scratch
+      </button>
+      
+    </div>
+    
+  </body>
+
+</html>

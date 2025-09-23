@@ -1,0 +1,151 @@
+{
+    "datetime": "2025-09-23T10:41:19.530797",
+    "bug_type": "Under Invalidation",
+    "styles_used": [
+        "background",
+        "background-color",
+        "display:inline",
+        "min-height",
+        "min-width",
+        "padding",
+        "padding-inline-start",
+        "position",
+        "right",
+        "top",
+        "z-index"
+    ],
+    "styles_used_string": "background,background-color,display:inline,min-height,min-width,padding,padding-inline-start,position,right,top,z-index",
+    "base_styles": [
+        "top",
+        "min-height",
+        "padding",
+        "min-width",
+        "background",
+        "padding-inline-start",
+        "right",
+        "position",
+        "background-color",
+        "z-index"
+    ],
+    "modified_styles": [
+        "display:inline"
+    ],
+    "variants": {
+        "Test Variant Summary": {
+            "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)": true
+        },
+        "Test Variant Details": [
+            {
+                "description": "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)",
+                "browser": "Firefox",
+                "browser_version": "143.0.1",
+                "is_original_variant": true,
+                "window_size": {
+                    "width": 1000,
+                    "height": 1000
+                },
+                "diff_method": "Python",
+                "forced_slow": [
+                    "force_slow"
+                ],
+                "os_name": "Windows",
+                "os_details": "Windows-11-10.0.26100-SP0",
+                "bug_detected": true
+            }
+        ]
+    },
+    "run_subject": {
+        "html_tree": {
+            "tree": [
+                {
+                    "tag": "<text>",
+                    "value": "Sit ut amet quisquam.",
+                    "children": []
+                },
+                {
+                    "tag": "div",
+                    "children": [],
+                    "id": "one"
+                },
+                {
+                    "id": "lqc_dev_controls",
+                    "tag": "div",
+                    "children": [
+                        {
+                            "tag": "button",
+                            "attributes": {
+                                "onclick": "makeStyleChanges()"
+                            },
+                            "children": [
+                                {
+                                    "tag": "<text>",
+                                    "value": "Incremental"
+                                }
+                            ]
+                        },
+                        {
+                            "tag": "button",
+                            "attributes": {
+                                "onclick": "fromScratchLayout()"
+                            },
+                            "children": [
+                                {
+                                    "tag": "<text>",
+                                    "value": "From Scratch"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "base_styles": {
+            "map": {
+                "one": {
+                    "padding-inline-start": "+440vi",
+                    "min-width": "50px",
+                    "min-height": "50px",
+                    "background-color": "black"
+                },
+                "lqc_dev_controls": {
+                    "position": "fixed",
+                    "top": "10px",
+                    "right": "10px",
+                    "padding": "5px",
+                    "z-index": "9999",
+                    "background": "rgba(0, 0, 0, .75)"
+                }
+            }
+        },
+        "modified_styles": {
+            "map": {
+                "one": {
+                    "display": "inline"
+                }
+            }
+        }
+    },
+    "pickle_addre": "pickles/run_subject_pre_d85f01cd90094f0eb78e0b8274d769d7.pkl",
+    "differences": [
+        {
+            "differing_dims": [
+                "x",
+                "left",
+                "right"
+            ],
+            "id": "one",
+            "id_tag": "one<div>",
+            "post_modify_dims": {
+                "left": 8,
+                "right": 4408,
+                "x": 8
+            },
+            "post_reload_dims": {
+                "left": 74.23333740234375,
+                "right": 4474.233337402344,
+                "x": 74.23333740234375
+            },
+            "tag": "div"
+        }
+    ]
+}

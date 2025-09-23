@@ -1,0 +1,159 @@
+{
+    "datetime": "2025-09-23T10:42:49.465472",
+    "bug_type": "Under Invalidation",
+    "styles_used": [
+        "background",
+        "background-color",
+        "display:inline",
+        "min-height",
+        "min-width",
+        "padding",
+        "padding-left",
+        "position",
+        "right",
+        "top",
+        "z-index"
+    ],
+    "styles_used_string": "background,background-color,display:inline,min-height,min-width,padding,padding-left,position,right,top,z-index",
+    "base_styles": [
+        "top",
+        "min-height",
+        "padding",
+        "min-width",
+        "background",
+        "right",
+        "padding-left",
+        "position",
+        "background-color",
+        "z-index"
+    ],
+    "modified_styles": [
+        "display:inline"
+    ],
+    "variants": {
+        "Test Variant Summary": {
+            "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)": true
+        },
+        "Test Variant Details": [
+            {
+                "description": "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)",
+                "browser": "Firefox",
+                "browser_version": "143.0.1",
+                "is_original_variant": true,
+                "window_size": {
+                    "width": 1000,
+                    "height": 1000
+                },
+                "diff_method": "Python",
+                "forced_slow": [
+                    "force_slow"
+                ],
+                "os_name": "Windows",
+                "os_details": "Windows-11-10.0.26100-SP0",
+                "bug_detected": true
+            }
+        ]
+    },
+    "run_subject": {
+        "html_tree": {
+            "tree": [
+                {
+                    "tag": "<text>",
+                    "value": "Sit numquam dolore voluptatem.",
+                    "children": []
+                },
+                {
+                    "tag": "div",
+                    "children": [
+                        {
+                            "tag": "<text>",
+                            "value": "Ipsum etincidunt amet neque quaerat quiquia.",
+                            "children": []
+                        }
+                    ],
+                    "id": "one"
+                },
+                {
+                    "tag": "<text>",
+                    "value": "Amet dolore sed quiquia sed. Modi quisquam est magnam.",
+                    "children": []
+                },
+                {
+                    "id": "lqc_dev_controls",
+                    "tag": "div",
+                    "children": [
+                        {
+                            "tag": "button",
+                            "attributes": {
+                                "onclick": "makeStyleChanges()"
+                            },
+                            "children": [
+                                {
+                                    "tag": "<text>",
+                                    "value": "Incremental"
+                                }
+                            ]
+                        },
+                        {
+                            "tag": "button",
+                            "attributes": {
+                                "onclick": "fromScratchLayout()"
+                            },
+                            "children": [
+                                {
+                                    "tag": "<text>",
+                                    "value": "From Scratch"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "base_styles": {
+            "map": {
+                "one": {
+                    "padding-left": "+1969ch",
+                    "min-width": "50px",
+                    "min-height": "50px",
+                    "background-color": "blue"
+                },
+                "lqc_dev_controls": {
+                    "position": "fixed",
+                    "top": "10px",
+                    "right": "10px",
+                    "padding": "5px",
+                    "z-index": "9999",
+                    "background": "rgba(0, 0, 0, .75)"
+                }
+            }
+        },
+        "modified_styles": {
+            "map": {
+                "one": {
+                    "display": "inline"
+                }
+            }
+        }
+    },
+    "pickle_addre": "pickles/run_subject_pre_d52d7539efaf4956829ce16870a726c8.pkl",
+    "differences": [
+        {
+            "differing_dims": [
+                "right",
+                "width"
+            ],
+            "id": "one",
+            "id_tag": "one<div>",
+            "post_modify_dims": {
+                "right": 15800.0166015625,
+                "width": 15792.0166015625
+            },
+            "post_reload_dims": {
+                "right": 15836,
+                "width": 15828
+            },
+            "tag": "div"
+        }
+    ]
+}

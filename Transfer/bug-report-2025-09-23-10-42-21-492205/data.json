@@ -1,0 +1,126 @@
+{
+    "datetime": "2025-09-23T10:42:21.519949",
+    "bug_type": "Under Invalidation",
+    "styles_used": [
+        "background-color",
+        "display:inline-block",
+        "display:table-caption",
+        "min-height",
+        "min-width"
+    ],
+    "styles_used_string": "background-color,display:inline-block,display:table-caption,min-height,min-width",
+    "base_styles": [
+        "min-height",
+        "display:table-caption",
+        "min-width",
+        "background-color"
+    ],
+    "modified_styles": [
+        "display:inline-block"
+    ],
+    "variants": {
+        "Test Variant Summary": {
+            "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)": true
+        },
+        "Test Variant Details": [
+            {
+                "description": "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)",
+                "browser": "Firefox",
+                "browser_version": "143.0.1",
+                "is_original_variant": true,
+                "window_size": {
+                    "width": 1000,
+                    "height": 1000
+                },
+                "diff_method": "Python",
+                "forced_slow": [
+                    "force_slow"
+                ],
+                "os_name": "Windows",
+                "os_details": "Windows-11-10.0.26100-SP0",
+                "bug_detected": true
+            }
+        ]
+    },
+    "run_subject": {
+        "html_tree": {
+            "tree": [
+                {
+                    "tag": "div",
+                    "children": [],
+                    "id": "two"
+                },
+                {
+                    "tag": "div",
+                    "children": [],
+                    "id": "one"
+                }
+            ]
+        },
+        "base_styles": {
+            "map": {
+                "one": {
+                    "display": "table-caption",
+                    "min-width": "50px",
+                    "min-height": "50px",
+                    "background-color": "yellow"
+                },
+                "two": {
+                    "min-width": "50px",
+                    "min-height": "50px",
+                    "background-color": "indigo"
+                }
+            }
+        },
+        "modified_styles": {
+            "map": {
+                "two": {
+                    "display": "inline-block"
+                }
+            }
+        }
+    },
+    "pickle_addre": "pickles/run_subject_pre_53f2491726584812b0695ca8b200effe.pkl",
+    "differences": [
+        {
+            "differing_dims": [
+                "y",
+                "top",
+                "bottom"
+            ],
+            "id": "two",
+            "id_tag": "two<div>",
+            "post_modify_dims": {
+                "bottom": 108,
+                "top": 58,
+                "y": 58
+            },
+            "post_reload_dims": {
+                "bottom": 58,
+                "top": 8,
+                "y": 8
+            },
+            "tag": "div"
+        },
+        {
+            "differing_dims": [
+                "y",
+                "top",
+                "bottom"
+            ],
+            "id": "one",
+            "id_tag": "one<div>",
+            "post_modify_dims": {
+                "bottom": 58,
+                "top": 8,
+                "y": 8
+            },
+            "post_reload_dims": {
+                "bottom": 111.5,
+                "top": 61.5,
+                "y": 61.5
+            },
+            "tag": "div"
+        }
+    ]
+}

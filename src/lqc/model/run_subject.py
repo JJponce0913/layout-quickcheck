@@ -41,11 +41,38 @@ class RunSubject:
             deepcopy(self.modified_styles)
         )
     
+    def _find_node(self, nodes, target_id):
+        for node in nodes:
+            if node.get("id") == target_id:
+                return node
+            res = self._find_node(node.get("children", []), target_id)
+            if res is not None:
+                return res
+        return None
+
+    def _collect_ids(self, node):
+        ids = set()
+        if isinstance(node, dict):
+            nid = node.get("id")
+            if nid is not None:
+                ids.add(nid)
+            for c in node.get("children", []):
+                ids |= self._collect_ids(c)
+        elif isinstance(node, list):
+            for c in node:
+                ids |= self._collect_ids(c)
+        return ids
+
     def removeElementById(self, id):
-        #BUG Loop over all elements under the id
-        self.base_styles.removeById(id)
-        self.modified_styles.removeById(id)
+        subtree = self._find_node(self.html_tree.tree, id)
+        ids_to_remove = {id} if subtree is None else self._collect_ids(subtree)
+        for rid in ids_to_remove:
+            if rid in self.base_styles.map:
+                del self.base_styles.map[rid]
+            if rid in self.modified_styles.map:
+                del self.modified_styles.map[rid]
         self.html_tree.removeElementById(id)
+
     
     def getElementIds(self):
         return self.html_tree.getElementIds() | self.base_styles.getElementIds() | self.modified_styles.getElementIds()
