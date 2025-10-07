@@ -27,6 +27,7 @@ class RunResultPass(RunResult):
     def isBug(self):
         #BUG Consider Js Errors as non-bugs
         return True """
+
 class RunResultCrash(RunResult):
 
     def __init__(self):

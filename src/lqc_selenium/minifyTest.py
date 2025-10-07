@@ -17,7 +17,7 @@ from lqc_selenium.selenium_harness.layout_tester import test_combination
 import pickle
 import inspect, lqc.model.run_subject as rsmod
 import os, uuid, pickle
-DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+DEFAULT_CONFIG_FILE = "./config/config-initial.json"
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""find bugs in browser layout calculation - run forever unless specified otherwise\n\nexamples: \n    compare.py -b 1         # Find one bug and quit \n    compare.py -t 2000      # Run 2000 tests and quit""")
 parser.add_argument("-v", "--verbose", help="increase output verbosity (repeatable argument -v, -vv, -vvv, -vvvv)", action="count", default=0)
 parser.add_argument("-b", "--bug-limit", help="quit after finding this many bugs", type=int, default=0)

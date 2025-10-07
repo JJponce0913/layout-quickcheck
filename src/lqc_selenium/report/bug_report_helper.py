@@ -15,7 +15,8 @@ def save_bug_report(
     run_subject: RunSubject,
     run_result: RunResult,
     original_filepath,
-    pickle_addre
+    pickle_addre,
+    patternFound
 ):
     file_config = FileConfig()
     bug_folder = file_config.getTimestampBugReport()
@@ -49,7 +50,8 @@ def save_bug_report(
         "modified_styles": modified_styles,
         "variants": variants,
         "run_subject": run_subject,
-        "pickle_addre": pickle_addre
+        "pickle_addre": pickle_addre,
+        "patternFound": patternFound
     }
     if isinstance(run_result, RunResultLayoutBug):
         json_data["differences"] = run_result.element_dimensions

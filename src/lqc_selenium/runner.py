@@ -16,6 +16,8 @@ from lqc_selenium.selenium_harness.layout_tester import test_combination
 import pickle
 import inspect, lqc.model.run_subject as rsmod
 import os, uuid, pickle, re
+from bs4 import BeautifulSoup
+
 
 def save_subject(run_subject, stage):
     os.makedirs("pickles", exist_ok=True)
@@ -72,9 +74,58 @@ def minify_debug(target_browser, run_subject):
     print("Minifying done.")
     return (run_subject, run_result, pickle_addre)
 
+from bs4 import BeautifulSoup
+
+def _visible_contents(parent):
+    out = []
+    for c in parent.contents:
+        if isinstance(c, str):
+            if c.strip():
+                out.append(c)
+        else:
+            out.append(c)
+    return out
+
+def _node_matches(node, spec):
+    if spec == "text":
+        return isinstance(node, str) and bool(node.strip())
+    if isinstance(spec, str):
+        return getattr(node, "name", None) == spec
+    if isinstance(spec, dict):
+        tag = spec.get("tag")
+        attrs = spec.get("attrs", {})
+        if tag and getattr(node, "name", None) != tag:
+            return False
+        for k, v in attrs.items():
+            if node.get(k) != v:
+                return False
+        return True
+    return False
+
+def check_pattern_in_file(filename, pattern):
+    with open(filename, "r", encoding="utf-8") as f:
+        soup = BeautifulSoup(f, "html.parser")
+    bodies = soup.find_all("body")
+    for body in bodies:
+        contents = _visible_contents(body)
+        n, m = len(contents), len(pattern)
+        if m == 0:
+            continue
+        for i in range(0, n - m + 1):
+            ok = True
+            for j in range(m):
+                if not _node_matches(contents[i + j], pattern[j]):
+                    ok = False
+                    break
+            if ok:
+                return True
+    return False
+
+
 def minify(target_browser, run_subject):
     pickle_addre= save_subject(run_subject, "pre")
     save_as_web_page(run_subject, "test_pre.html")
+    patternFound= check_pattern_in_file("test_pre.html", ["text", "div"])
     print("Minifying...")
     stepsFactory = MinifyStepFactory()
 
@@ -96,7 +147,7 @@ def minify(target_browser, run_subject):
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     print("Minifying done.")
-    return (run_subject, run_result,pickle_addre)
+    return (run_subject, run_result,pickle_addre, patternFound)
 
 
 
@@ -121,7 +172,7 @@ def find_bugs(counter):
             else:
                 print("Found bug. Minifying...")
 
-            (minified_run_subject, minified_run_result,pickle_addre) = minify(target_browser, run_subject)
+            (minified_run_subject, minified_run_result,pickle_addre, patternFound) = minify(target_browser, run_subject)
 
             # False Positive Detection
             if not minified_run_result.isBug():
@@ -137,14 +188,16 @@ def find_bugs(counter):
                 # Stage 3 - Test Variants
                 print("Minified bug. Testing variants...")
                 variants = test_variants(minified_run_subject)
-
+                if patternFound:
+                    print(f"PATTERN FOUND: {patternFound}")
                 print("Variants tested. Saving bug report...")
                 url = save_bug_report(
                     variants,
                     minified_run_subject,
                     minified_run_result,
                     test_filepath,
-                    pickle_addre
+                    pickle_addre,
+                    patternFound
                 )
                 print(url)
 
@@ -157,7 +210,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+DEFAULT_CONFIG_FILE = "./config/config-initial.json"
 
 if __name__ == "__main__":
 
