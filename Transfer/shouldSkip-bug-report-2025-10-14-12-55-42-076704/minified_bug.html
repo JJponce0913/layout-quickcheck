@@ -11,7 +11,7 @@
       
       // Make the style changes to the page
       function makeStyleChanges() {
-          three.style["display"] = "grid";
+          one.style["display"] = "inline";
           
       }
       
@@ -22,17 +22,13 @@
       function simpleRecreate() {
           console.log("Make changes and perform incremental layout");
           makeStyleChanges();
-          printDimensions(two, ["y", "top", "bottom"]);
-          printDimensions(three, ["y", "top", "bottom"]);
-          printDimensions(one, ["y", "top", "bottom"]);
+          printDimensions(one, ["x", "left", "right"]);
           
       
           // Reload the elements
           console.log("Perform from scratch layout, below values should differ from above");
           fromScratchLayout();
-          printDimensions(two, ["y", "top", "bottom"]);
-          printDimensions(three, ["y", "top", "bottom"]);
-          printDimensions(one, ["y", "top", "bottom"]);
+          printDimensions(one, ["x", "left", "right"]);
           
       }
       
@@ -46,16 +42,8 @@
   </head>
 
   <body>
-    
-    <div style="display:table-column;min-width:50px;min-height:50px;background-color:red"  id="two">
-      Dolorem etincidunt adipisci adipisci amet porro aliquam est.
-    </div>
-    
-    <div style="margin-block-start:20px;min-width:50px;min-height:50px;background-color:green"  id="three">
-      
-    </div>
-    
-    <div style="min-width:50px;min-height:50px;background-color:green"  id="one">
+    Etincidunt voluptatem voluptatem non.
+    <div style="padding-left:+614vb;min-width:50px;min-height:50px;background-color:orange"  id="one">
       
     </div>
     

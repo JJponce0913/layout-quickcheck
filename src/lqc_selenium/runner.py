@@ -100,7 +100,7 @@ def node_matches(node, spec):
         return True
     return False
 
-def check_pattern_in_file(filename, pattern):
+def check_pattern(filename, pattern):
     with open(filename, "r", encoding="utf-8") as f:
         soup = BeautifulSoup(f, "html.parser")
     bodies = soup.find_all("body")
@@ -120,7 +120,7 @@ def check_pattern_in_file(filename, pattern):
     return False
 
 
-def has_style_assignment_in_make_style_changes(html_path, prop, value):
+def check_style(html_path, prop, value):
     with open(html_path, "r", encoding="utf-8") as f:
         html = f.read()
     scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, flags=re.I | re.S)
@@ -143,8 +143,9 @@ count_summary = {
 }
 
 def should_skip(file):
-    patternFound = check_pattern_in_file(file, ["text", "div"])
-    styleFound = has_style_assignment_in_make_style_changes(file, "display", "none")
+    #CHANGE WITH YOUR CONDITIONS
+    patternFound = check_pattern(file, ["text", "div"])
+    styleFound = check_style(file, "display", "inline")
 
     if patternFound and styleFound:
         count_summary["pattern_and_style"] += 1

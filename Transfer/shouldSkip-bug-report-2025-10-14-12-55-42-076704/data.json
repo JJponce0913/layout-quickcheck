@@ -1,5 +1,5 @@
 {
-    "datetime": "2025-09-23T10:41:19.530797",
+    "datetime": "2025-10-14T12:55:42.081751",
     "bug_type": "Under Invalidation",
     "styles_used": [
         "background",
@@ -8,24 +8,24 @@
         "min-height",
         "min-width",
         "padding",
-        "padding-inline-start",
+        "padding-left",
         "position",
         "right",
         "top",
         "z-index"
     ],
-    "styles_used_string": "background,background-color,display:inline,min-height,min-width,padding,padding-inline-start,position,right,top,z-index",
+    "styles_used_string": "background,background-color,display:inline,min-height,min-width,padding,padding-left,position,right,top,z-index",
     "base_styles": [
-        "top",
-        "min-height",
-        "padding",
-        "min-width",
-        "background",
-        "padding-inline-start",
-        "right",
-        "position",
         "background-color",
-        "z-index"
+        "z-index",
+        "position",
+        "min-height",
+        "top",
+        "padding-left",
+        "background",
+        "min-width",
+        "right",
+        "padding"
     ],
     "modified_styles": [
         "display:inline"
@@ -38,7 +38,7 @@
             {
                 "description": "Firefox(headless=True, slow=False, width=1000, height=1000, options=None)",
                 "browser": "Firefox",
-                "browser_version": "143.0.1",
+                "browser_version": "143.0.4",
                 "is_original_variant": true,
                 "window_size": {
                     "width": 1000,
@@ -59,7 +59,7 @@
             "tree": [
                 {
                     "tag": "<text>",
-                    "value": "Sit ut amet quisquam.",
+                    "value": "Etincidunt voluptatem voluptatem non.",
                     "children": []
                 },
                 {
@@ -102,10 +102,10 @@
         "base_styles": {
             "map": {
                 "one": {
-                    "padding-inline-start": "+440vi",
+                    "padding-left": "+614vb",
                     "min-width": "50px",
                     "min-height": "50px",
-                    "background-color": "black"
+                    "background-color": "orange"
                 },
                 "lqc_dev_controls": {
                     "position": "fixed",
@@ -125,7 +125,8 @@
             }
         }
     },
-    "pickle_addre": "pickles/run_subject_pre_d85f01cd90094f0eb78e0b8274d769d7.pkl",
+    "pickle_addre": "pickles/run_subject_pre_0b05685078884cb3b1f759dca65fd456.pkl",
+    "shouldSkip": true,
     "differences": [
         {
             "differing_dims": [
@@ -137,13 +138,13 @@
             "id_tag": "one<div>",
             "post_modify_dims": {
                 "left": 8,
-                "right": 4408,
+                "right": 5626.10009765625,
                 "x": 8
             },
             "post_reload_dims": {
-                "left": 74.23333740234375,
-                "right": 4474.233337402344,
-                "x": 74.23333740234375
+                "left": 36,
+                "right": 5654.10009765625,
+                "x": 36
             },
             "tag": "div"
         }

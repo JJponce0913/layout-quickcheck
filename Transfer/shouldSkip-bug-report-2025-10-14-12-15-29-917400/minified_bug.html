@@ -11,7 +11,7 @@
       
       // Make the style changes to the page
       function makeStyleChanges() {
-          one.style["display"] = "inline";
+          two.style["text-combine-upright"] = "all";
           
       }
       
@@ -22,13 +22,15 @@
       function simpleRecreate() {
           console.log("Make changes and perform incremental layout");
           makeStyleChanges();
-          printDimensions(one, ["x", "left", "right"]);
+          printDimensions(one, ["y", "top", "bottom"]);
+          printDimensions(two, ["y", "top", "bottom"]);
           
       
           // Reload the elements
           console.log("Perform from scratch layout, below values should differ from above");
           fromScratchLayout();
-          printDimensions(one, ["x", "left", "right"]);
+          printDimensions(one, ["y", "top", "bottom"]);
+          printDimensions(two, ["y", "top", "bottom"]);
           
       }
       
@@ -42,11 +44,15 @@
   </head>
 
   <body>
-    Sit amet adipisci magnam magnam est tempora.Numquam voluptatem numquam etincidunt est dolorem sed. Est ipsum modi magnam est ut numquam.Voluptatem aliquam porro amet quiquia consectetur quiquia quiquia.
-    <div style="margin-inline-end:+1789in;min-width:50px;min-height:50px;background-color:red"  id="one">
+    Consectetur dolore consectetur sed voluptatem sit tempora est.
+    <div style="display:table-caption;min-width:50px;min-height:50px;background-color:blue"  id="one">
       
     </div>
     
+    <div style="border-top-style:dashed;min-width:50px;min-height:50px;background-color:orange"  id="two">
+      
+    </div>
+    Est non dolor consectetur ipsum.Dolorem etincidunt est voluptatem consectetur velit.Est consectetur velit magnam.
     <div style="position:fixed;top:10px;right:10px;padding:5px;z-index:9999;background:rgba(0, 0, 0, .75)"  id="lqc_dev_controls">
       
       <button style="" onclick='makeStyleChanges()' id="">
