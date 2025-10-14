@@ -16,10 +16,13 @@ def save_bug_report(
     run_result: RunResult,
     original_filepath,
     pickle_addre,
-    patternFound
+    shouldSkip
 ):
     file_config = FileConfig()
-    bug_folder = file_config.getTimestampBugReport()
+    if shouldSkip:
+        bug_folder = file_config.getCustomTimestampBugReport("shouldSkip-bug-report")
+    else:
+        bug_folder = file_config.getTimestampBugReport()
 
     # Create a folder to hold all the bug report files
     os.mkdir(bug_folder)
@@ -51,7 +54,7 @@ def save_bug_report(
         "variants": variants,
         "run_subject": run_subject,
         "pickle_addre": pickle_addre,
-        "patternFound": patternFound
+        "shouldSkip": shouldSkip
     }
     if isinstance(run_result, RunResultLayoutBug):
         json_data["differences"] = run_result.element_dimensions

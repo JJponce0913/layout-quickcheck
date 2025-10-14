@@ -262,8 +262,10 @@ class MinifyStepFactory():
             try:
                 # Attempt to get the next manipulation from the current generator
                 manipulation = next(self.current_generator)
-                print(manipulation)  # shows <Manipulation: Remove element X>
-                print(f"Applying minimization step from {self.GENERATORS[self.current_generator_index].__name__}")
+
+                #PRINT MANIPULATION
+                #print(manipulation)  # shows <Manipulation: Remove element X>
+                #print(f"Applying minimization step from {self.GENERATORS[self.current_generator_index].__name__}")
 
             except StopIteration:
                 # If the current generator is exhausted, move to the next one

@@ -74,9 +74,7 @@ def minify_debug(target_browser, run_subject):
     print("Minifying done.")
     return (run_subject, run_result, pickle_addre)
 
-from bs4 import BeautifulSoup
-
-def _visible_contents(parent):
+def visible_contents(parent):
     out = []
     for c in parent.contents:
         if isinstance(c, str):
@@ -86,7 +84,7 @@ def _visible_contents(parent):
             out.append(c)
     return out
 
-def _node_matches(node, spec):
+def node_matches(node, spec):
     if spec == "text":
         return isinstance(node, str) and bool(node.strip())
     if isinstance(spec, str):
@@ -107,14 +105,14 @@ def check_pattern_in_file(filename, pattern):
         soup = BeautifulSoup(f, "html.parser")
     bodies = soup.find_all("body")
     for body in bodies:
-        contents = _visible_contents(body)
+        contents = visible_contents(body)
         n, m = len(contents), len(pattern)
         if m == 0:
             continue
         for i in range(0, n - m + 1):
             ok = True
             for j in range(m):
-                if not _node_matches(contents[i + j], pattern[j]):
+                if not node_matches(contents[i + j], pattern[j]):
                     ok = False
                     break
             if ok:
@@ -122,11 +120,57 @@ def check_pattern_in_file(filename, pattern):
     return False
 
 
+def has_style_assignment_in_make_style_changes(html_path, prop, value):
+    with open(html_path, "r", encoding="utf-8") as f:
+        html = f.read()
+    scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, flags=re.I | re.S)
+    js = "\n".join(scripts)
+    m = re.search(r"function\s+makeStyleChanges\s*\(\s*\)\s*\{(.*?)\}", js, flags=re.S)
+    if not m:
+        return False
+    body = m.group(1)
+    prop_esc = re.escape(prop)
+    value_esc = re.escape(value)
+    bracket_pat = rf"\.style\[\s*['\"]{prop_esc}['\"]\s*\]\s*=\s*['\"]{value_esc}['\"]\s*;"
+    dot_pat = rf"\.style\.\s*{prop_esc}\s*=\s*['\"]{value_esc}['\"]\s*;"
+    return re.search(bracket_pat, body) is not None or re.search(dot_pat, body) is not None
+
+count_summary = {
+    "pattern_and_style": 0,
+    "pattern_only": 0,
+    "style_only": 0,
+    "none": 0
+}
+
+def should_skip(file):
+    patternFound = check_pattern_in_file(file, ["text", "div"])
+    styleFound = has_style_assignment_in_make_style_changes(file, "display", "none")
+
+    if patternFound and styleFound:
+        count_summary["pattern_and_style"] += 1
+    elif patternFound and not styleFound:
+        count_summary["pattern_only"] += 1
+    elif not patternFound and styleFound:
+        count_summary["style_only"] += 1
+    else:
+        count_summary["none"] += 1
+
+    print(f"Pattern found: {patternFound}, Style found: {styleFound}")
+    return (patternFound and styleFound)
+
+
+# Example:
+# print(has_style_assignment_in_make_style_changes("example.html", "display", "inline-block"))
+
 def minify(target_browser, run_subject):
     pickle_addre= save_subject(run_subject, "pre")
     save_as_web_page(run_subject, "test_pre.html")
-    patternFound= check_pattern_in_file("test_pre.html", ["text", "div"])
-    print("Minifying...")
+
+    #Return True if pattern found, else False
+    shouldSkip = should_skip("test_pre.html")
+    print(count_summary)
+
+    #print("Minifying...")
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
@@ -135,7 +179,7 @@ def minify(target_browser, run_subject):
         temp_run_subject = stepsFactory.next_minimization_step(run_subject)
         # If there are no more steps, exit the loop
         if temp_run_subject is None:
-            print("No more minimization steps available.")
+            #print("No more minimization steps available.")
             break
 
         # Test the proposed minimized subject in the target browser
@@ -146,8 +190,8 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    print("Minifying done.")
-    return (run_subject, run_result,pickle_addre, patternFound)
+    #print("Minifying done.")
+    return (run_subject, run_result,pickle_addre, shouldSkip)
 
 
 
@@ -172,7 +216,7 @@ def find_bugs(counter):
             else:
                 print("Found bug. Minifying...")
 
-            (minified_run_subject, minified_run_result,pickle_addre, patternFound) = minify(target_browser, run_subject)
+            (minified_run_subject, minified_run_result,pickle_addre, shouldSkip) = minify(target_browser, run_subject)
 
             # False Positive Detection
             if not minified_run_result.isBug():
@@ -188,8 +232,8 @@ def find_bugs(counter):
                 # Stage 3 - Test Variants
                 print("Minified bug. Testing variants...")
                 variants = test_variants(minified_run_subject)
-                if patternFound:
-                    print(f"PATTERN FOUND: {patternFound}")
+                if shouldSkip:
+                    print(f"PATTERN FOUND: {shouldSkip}")
                 print("Variants tested. Saving bug report...")
                 url = save_bug_report(
                     variants,
@@ -197,7 +241,7 @@ def find_bugs(counter):
                     minified_run_result,
                     test_filepath,
                     pickle_addre,
-                    patternFound
+                    shouldSkip
                 )
                 print(url)
 

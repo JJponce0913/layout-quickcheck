@@ -36,15 +36,18 @@ def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
         if slow:
             time.sleep(0.5)
         results = webdriver.execute_script("return checkForBug()")
-        try:
+        
+        #Printing the diff results
+        """ try:
             print("Diff:\n" + json.dumps(results, indent=2, default=str))
         except TypeError:
-            print(f"Diff: {results}")
+            print(f"Diff: {results}") """
+
         if results and len(results) > 0:
-            print("Outcome: BUG")
+            #print("Outcome: BUG")
             return RunResultLayoutBug(results)
         else:
-            print("Outcome: PASS")
+            #print("Outcome: PASS")
             return RunResultPass()
     except TimeoutException:
         print("Outcome: TIMEOUT")

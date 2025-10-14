@@ -9,16 +9,16 @@ def extract_styles(text):
     results = []
     for pat in patterns:
         results.extend(pat.findall(text))
-    out = []
+    cleaned = []
     for k, v in results:
         k = k.strip().replace('"', '').replace("'", '')
         v = v.strip().replace('"', '').replace("'", '')
         if k:
-            out.append((k, v))
-    return out
+            cleaned.append((k, v))
+    return cleaned
 
 def aggregate_counts(root="bug_reports"):
-    totals = collections.Counter()
+    combo_counter = collections.Counter()
     for entry in os.scandir(root):
         if not entry.is_dir():
             continue
@@ -30,15 +30,28 @@ def aggregate_counts(root="bug_reports"):
                 text = f.read()
         except Exception:
             continue
-        totals.update(extract_styles(text))
-    return totals
+
+        unique_pairs = sorted(set(extract_styles(text)))
+        if unique_pairs:
+            # Convert to tuple of tuples so it’s hashable
+            key = tuple(unique_pairs)
+            combo_counter[key] += 1
+
+    # Convert back to structured list for JSON
+    combined = []
+    for combo, count in combo_counter.most_common():
+        entry = {"count": count}
+        for i, (prop, val) in enumerate(combo, start=1):
+            entry[f"property_{i}"] = prop
+            entry[f"value_{i}"] = val
+        combined.append(entry)
+
+    return combined
 
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else "bug_reports"
-    totals = aggregate_counts(root)
-    combined = [{"property": k[0], "value": k[1], "count": c} for k, c in totals.most_common()]
+    combined = aggregate_counts(root)
     output = {"root": os.path.abspath(root), "combined_counts": combined}
-
     with open("style_counts_aggregate.json", "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2)
 

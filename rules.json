@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "name": "DispNone",
+      "rule_class": {
+        "style": [
+          [
+            "display",
+            "inline"
+          ]
+        ],
+        "html_pattern": [
+          "text",
+          "div"
+        ]
+      }
+    }
+  ]
+}
