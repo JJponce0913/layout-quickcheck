@@ -171,6 +171,9 @@ def minify(target_browser, run_subject):
     #more runs
     #fewer bugs
     #more good bugs
+    if shouldSkip:
+        run_result, _ = test_combination(target_browser.getDriver(), run_subject)
+        return (run_subject, run_result, pickle_addre, shouldSkip)
 
     #print("Minifying...")
     stepsFactory = MinifyStepFactory()
