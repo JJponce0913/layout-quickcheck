@@ -159,17 +159,18 @@ def should_skip(file):
     print(f"Pattern found: {patternFound}, Style found: {styleFound}")
     return (patternFound and styleFound)
 
-
-# Example:
-# print(has_style_assignment_in_make_style_changes("example.html", "display", "inline-block"))
-
 def minify(target_browser, run_subject):
     pickle_addre= save_subject(run_subject, "pre")
     save_as_web_page(run_subject, "test_pre.html")
 
     #Return True if pattern found, else False
     shouldSkip = should_skip("test_pre.html")
+    
     print(count_summary)
+    
+    #more runs
+    #fewer bugs
+    #more good bugs
 
     #print("Minifying...")
     stepsFactory = MinifyStepFactory()
