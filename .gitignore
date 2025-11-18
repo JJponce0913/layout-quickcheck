@@ -6,6 +6,7 @@ bugreportfiles
 bug_reports
 layoutfiles
 tmp_generated_files
+/temp
 *.log
 node_modules
 jsdist
@@ -23,7 +24,7 @@ results/*
 bin/
 lib/
 include/
-/pickles
-/testminify
-/temp
+
+
+
 

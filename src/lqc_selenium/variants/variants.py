@@ -129,6 +129,7 @@ class ChromeVariant(Variant):
         if not self.webdriver_path:
             raise RuntimeError("Chrome Driver not found")
         chrome_options = ChromeOptions()
+        #print("SDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD\n\n\n\n\n\n\n\\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
         if self.headless:
             chrome_options.add_argument("--headless=new")
             chrome_options.add_argument("--no-sandbox")
@@ -137,12 +138,13 @@ class ChromeVariant(Variant):
             chrome_options.binary_location = self.binary_path
         for arg in self.args:
             chrome_options.add_argument(arg)
-        service = Service(self.webdriver_path)
+        service = Service(executable_path=self.webdriver_path, log_output=subprocess.DEVNULL)
         drv = webdriver.Chrome(service=service, options=chrome_options)
         drv.set_window_size(self.width, self.height)
         drv.finish = types.MethodType(finish, drv)
         atexit.register(drv.finish)
         return drv
+
 
 
 class FirefoxVariant(Variant):

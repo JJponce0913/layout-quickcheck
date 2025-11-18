@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import pickle
 from datetime import datetime
 from lqc.config.file_config import FileConfig
 from lqc.generate.web_page.create import save_as_web_page
@@ -15,7 +16,7 @@ def save_bug_report(
     run_subject: RunSubject,
     run_result: RunResult,
     original_filepath,
-    pickle_addre,
+    pickle_subject,
     shouldSkip
 ):
     file_config = FileConfig()
@@ -44,6 +45,12 @@ def save_bug_report(
     base_styles = list(run_subject.base_styles.all_style_names())
     modified_styles = list(run_subject.modified_styles.all_style_names())
     bug_type = "Page Crash" if run_result.type == BugType.PAGE_CRASH else "Under Invalidation"
+
+    
+    pickle_addr = f"{bug_folder}/run_subject_pre.pkl"
+    with open(pickle_addr, "wb") as f:
+        pickle.dump(run_subject, f)
+
     json_data = {
         "datetime": datetime.now().isoformat(),
         "bug_type": bug_type,
@@ -53,7 +60,7 @@ def save_bug_report(
         "modified_styles": modified_styles,
         "variants": variants,
         "run_subject": run_subject,
-        "pickle_addre": pickle_addre,
+        "pickle_addr": pickle_addr,
         "shouldSkip": shouldSkip
     }
     if isinstance(run_result, RunResultLayoutBug):

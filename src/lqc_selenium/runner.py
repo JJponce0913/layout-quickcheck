@@ -19,12 +19,6 @@ import os, uuid, pickle, re
 from bs4 import BeautifulSoup
 
 
-def save_subject(run_subject, stage):
-    os.makedirs("pickles", exist_ok=True)
-    fn = f"pickles/run_subject_{stage}_{uuid.uuid4().hex}.pkl"
-    with open(fn, "wb") as f:
-        pickle.dump(run_subject, f)
-    return fn
 
 def _ensure_dir(d):
     if not os.path.isdir(d):
@@ -142,20 +136,21 @@ count_summary = {
     "none": 0
 }
 
-import json
-
-with open("rules.json", "r", encoding="utf-8") as f:
-    rules = json.load(f)
-
 count_summary = {"pattern_and_style": 0, "pattern_only": 0, "style_only": 0, "none": 0}
 
 def should_skip(file):
     any_match = False
-    for rule in rules.get("rules", []):
-        rc = rule.get("rule_class", {})
-        html_pat = rc.get("html_pattern", [])
-        styles = rc.get("style", [])
+    conf = Config()
+    rules = conf.getRules()
+    for rule in rules:
+        # Get rule class details
+        html_pat = rule.get("html_pattern", [])
+        styles = rule.get("style", [])
+
+        # Check HTML pattern
         patternFound = check_pattern(file, html_pat)
+        
+        # Check styles
         styleFound = False
         for prop, values in styles:
             vals = values if isinstance(values, list) else [values]
@@ -165,6 +160,8 @@ def should_skip(file):
                     break
             if styleFound:
                 break
+        
+        # Update count summary
         if patternFound and styleFound:
             count_summary["pattern_and_style"] += 1
             any_match = True
@@ -175,14 +172,14 @@ def should_skip(file):
         else:
             count_summary["none"] += 1
         print(f"Rule={rule.get('name','')}, Pattern found: {patternFound}, Style found: {styleFound}")
+
+        
     return any_match
 
 
 
 def minify(target_browser, run_subject):
-    pickle_addre= save_subject(run_subject, "pre")
-    save_as_web_page(run_subject, "test_pre.html")
-
+    pickle_subject= run_subject
     #Return True if pattern found, else False
     shouldSkip = should_skip("test_pre.html")
     
@@ -193,7 +190,7 @@ def minify(target_browser, run_subject):
     #more good bugs
     if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, pickle_addre, shouldSkip)
+        return (run_subject, run_result, pickle_subject, shouldSkip)
 
     #print("Minifying...")
     stepsFactory = MinifyStepFactory()
@@ -216,7 +213,7 @@ def minify(target_browser, run_subject):
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     #print("Minifying done.")
-    return (run_subject, run_result,pickle_addre, shouldSkip)
+    return (run_subject, run_result,pickle_subject, shouldSkip)
 
 
 
@@ -241,7 +238,7 @@ def find_bugs(counter):
             else:
                 print("Found bug. Minifying...")
 
-            (minified_run_subject, minified_run_result,pickle_addre, shouldSkip) = minify(target_browser, run_subject)
+            (minified_run_subject, minified_run_result,pickle_subject, shouldSkip) = minify(target_browser, run_subject)
 
             # False Positive Detection
             if not minified_run_result.isBug():
@@ -265,7 +262,7 @@ def find_bugs(counter):
                     minified_run_subject,
                     minified_run_result,
                     test_filepath,
-                    pickle_addre,
+                    pickle_subject,
                     shouldSkip
                 )
                 print(url)
@@ -279,7 +276,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/config-initial-chrome.json"
+DEFAULT_CONFIG_FILE = "./config/local/config-initial-chrome.json"
 
 if __name__ == "__main__":
 
