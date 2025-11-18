@@ -1,12 +1,16 @@
 {
   "rules": [
     {
-      "name": "DispInline",
+      "name": "DispNone",
       "rule_class": {
         "style": [
           [
             "display",
-            "inline"
+            [
+              "inline",
+              "none",
+              "inline-grid"
+            ]
           ]
         ],
         "html_pattern": [
@@ -16,16 +20,25 @@
       }
     },
     {
-      "name": "DispNone",
+      "name": "DispTable",
       "rule_class": {
         "style": [
           [
             "display",
-            "none"
+            [
+              "table-header-group",
+              "table-cell",
+              "table-row",
+              "table-row-group",
+              "table-caption",
+              "table-footer-group",
+              "table-column",
+              "table-column-group"
+            ]
           ]
         ],
         "html_pattern": [
-          "text",
+          "div",
           "div"
         ]
       }

@@ -60,7 +60,7 @@ class Rule:
 json_path = "rules.json"
 
 # Add a rule
-r = Rule("DispNone", [("display", "inline")], ["text", "div"])
+r = Rule("DispTable", [("display", ["table-header-group","table-cell","table-row","table-row-group","table-caption","table-footer-group","table-column","table-column-group"])], ["div", "div"])
 r.add_to_json(json_path)
 
 # Load back all rules

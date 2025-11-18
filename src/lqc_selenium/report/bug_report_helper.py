@@ -22,7 +22,7 @@ def save_bug_report(
     if shouldSkip:
         return ("Skipped Bug - Not Saving Report")
     else:
-        bug_folder = file_config.getTimestampBugReport("postSkip-bug-report")
+        bug_folder = file_config.getCustomTimestampBugReport("postSkip-bug-report")
 
     # Create a folder to hold all the bug report files
     os.mkdir(bug_folder)

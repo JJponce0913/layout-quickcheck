@@ -142,22 +142,42 @@ count_summary = {
     "none": 0
 }
 
+import json
+
+with open("rules.json", "r", encoding="utf-8") as f:
+    rules = json.load(f)
+
+count_summary = {"pattern_and_style": 0, "pattern_only": 0, "style_only": 0, "none": 0}
+
 def should_skip(file):
-    #CHANGE WITH YOUR CONDITIONS
-    patternFound = check_pattern(file, ["text", "div"])
-    styleFound = check_style(file, "display", "inline")
+    any_match = False
+    for rule in rules.get("rules", []):
+        rc = rule.get("rule_class", {})
+        html_pat = rc.get("html_pattern", [])
+        styles = rc.get("style", [])
+        patternFound = check_pattern(file, html_pat)
+        styleFound = False
+        for prop, values in styles:
+            vals = values if isinstance(values, list) else [values]
+            for v in vals:
+                if check_style(file, prop, v):
+                    styleFound = True
+                    break
+            if styleFound:
+                break
+        if patternFound and styleFound:
+            count_summary["pattern_and_style"] += 1
+            any_match = True
+        elif patternFound and not styleFound:
+            count_summary["pattern_only"] += 1
+        elif not patternFound and styleFound:
+            count_summary["style_only"] += 1
+        else:
+            count_summary["none"] += 1
+        print(f"Rule={rule.get('name','')}, Pattern found: {patternFound}, Style found: {styleFound}")
+    return any_match
 
-    if patternFound and styleFound:
-        count_summary["pattern_and_style"] += 1
-    elif patternFound and not styleFound:
-        count_summary["pattern_only"] += 1
-    elif not patternFound and styleFound:
-        count_summary["style_only"] += 1
-    else:
-        count_summary["none"] += 1
 
-    print(f"Pattern found: {patternFound}, Style found: {styleFound}")
-    return (patternFound and styleFound)
 
 def minify(target_browser, run_subject):
     pickle_addre= save_subject(run_subject, "pre")
@@ -259,7 +279,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/config-initial.json"
+DEFAULT_CONFIG_FILE = "./config/config-initial-chrome.json"
 
 if __name__ == "__main__":
 
@@ -270,7 +290,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--crash-limit", help="quit after crashing this many times", type=int, default=1)
     parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
     args = parser.parse_args()
-
+    
     # Initialize Config
     print(f"Using config file {args.config_file}")
     conf = parse_config(args.config_file)

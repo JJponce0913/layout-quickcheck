@@ -52,7 +52,7 @@ def main():
     root = sys.argv[1] if len(sys.argv) > 1 else "bug_reports"
     combined = aggregate_counts(root)
     output = {"root": os.path.abspath(root), "combined_counts": combined}
-    with open("style_counts_aggregate.json", "w", encoding="utf-8") as f:
+    with open("style_counts_aggregate_firefox.json", "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2)
 
 if __name__ == "__main__":
