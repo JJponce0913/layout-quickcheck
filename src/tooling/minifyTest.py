@@ -25,31 +25,11 @@ examples:
     debug_minify.py path/to/run_subject.pkl -c ./config/config-initial.json"""
 )
 parser.add_argument("pickle_file", help="path to pickled RunSubject", type=str)
-parser.add_argument(
-    "-v", "--verbose",
-    help="increase output verbosity (repeatable argument -v, -vv, -vvv, -vvvv)",
-    action="count", default=0
-)
-parser.add_argument(
-    "-b", "--bug-limit",
-    help="quit after finding this many bugs",
-    type=int, default=0
-)
-parser.add_argument(
-    "-t", "--test-limit",
-    help="quit after running this many tests",
-    type=int, default=0
-)
-parser.add_argument(
-    "-l", "--crash-limit",
-    help="quit after crashing this many times",
-    type=int, default=1
-)
-parser.add_argument(
-    "-c", "--config-file",
-    help="path to config file to use",
-    type=str, default=DEFAULT_CONFIG_FILE
-)
+parser.add_argument("-v", "--verbose", help="increase output verbosity (repeatable argument -v, -vv, -vvv, -vvvv)", action="count", default=0)
+parser.add_argument("-b", "--bug-limit", help="quit after finding this many bugs", type=int, default=0)
+parser.add_argument("-t", "--test-limit", help="quit after running this many tests", type=int, default=0)
+parser.add_argument("-l", "--crash-limit", help="quit after crashing this many times", type=int, default=1)
+parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
 args = parser.parse_args()
 
 print(f"Using config file {args.config_file}")
