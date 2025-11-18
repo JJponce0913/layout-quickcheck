@@ -6,7 +6,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-import time
+import time, json
 
 
 # Returns (differencesIsNone, differencesList, fileName)
@@ -21,11 +21,6 @@ def test_combination(webdriver, run_subject: RunSubject, slow=False, keep_file=F
         return run_result, None
     else:
         return run_result, test_filepath
-
-
-import json
-
-import json
 
 def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
     webdriver.get(f"{test_url}")

@@ -129,7 +129,6 @@ class ChromeVariant(Variant):
         if not self.webdriver_path:
             raise RuntimeError("Chrome Driver not found")
         chrome_options = ChromeOptions()
-        #print("SDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD\n\n\n\n\n\n\n\\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
         if self.headless:
             chrome_options.add_argument("--headless=new")
             chrome_options.add_argument("--no-sandbox")

@@ -31,7 +31,6 @@ class Config:
             paths = config.get("paths", {})
             cls.__instance.path_bug_reports_dir = paths.get("bug-reports-directory", "./bug_reports")
             cls.__instance.path_tmp_files_dir = paths.get("tmp-files-directory", "./tmp_generated_files")
-            #Create instance for rules
         elif cls.__instance == None:
             raise RuntimeError("Config must be initialized before use")
 

@@ -6,12 +6,7 @@
     },
 
     "variants": [
-        {
-            "type": "firefox",
-            "webdriver_path": "C:/Users/Jesus Javier Ponce/Documents/JJponce0913/layout-quickcheck/geckodriver.exe",
-            "binary_path": "C:/Program Files/Mozilla Firefox/firefox.exe"
-
-        }
+        {"type": "firefox"}
     ],
 
 
