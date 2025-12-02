@@ -6,7 +6,9 @@ class StyleMap():
 
     def __init__(self, map):
         self.map = map
-        pass
+
+    def __str__(self):
+        return "\n".join(f"{k}: {v}" for k, v in self.map.items())
     
     def removeById(self, id):
         del self.map[id]

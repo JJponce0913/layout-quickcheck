@@ -277,7 +277,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/local/config-initial-chrome.json"
+DEFAULT_CONFIG_FILE = "./config/local/config-initial.json"
 
 if __name__ == "__main__":
 

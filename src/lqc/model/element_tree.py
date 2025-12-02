@@ -3,6 +3,10 @@ class ElementTree():
 
     def __init__(self, tree):
         self.tree = tree
+    
+    def __str__(self):
+        return "\n".join(str(line) for line in self.tree)
+
 
     def _removeElementInTreeById(self, id, node_list):
         for node in node_list:
