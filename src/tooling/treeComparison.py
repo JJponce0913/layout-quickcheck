@@ -105,8 +105,8 @@ def walk_tree(n, depth=0):
     tag = n.attrs.get("tag", "")
 
     if isinstance(n, TextNode) or tag == "#text":
-        text= n.attrs.get("text", "")
-        print(indent + "TextNode: " + repr(text))
+        text = n.attrs.get("text", "")
+        print(indent + repr(text))
     else:
         label = tag
         if n.id != "none":
@@ -174,20 +174,12 @@ def merge_attrs(n1, n2):
 
     return attrs
 
-def build_common_tree(n1, n2, debug=False):
-
-    # ---------- debug logging helper ----------
-    def log(*args, **kwargs):
-        if debug:
-            print(*args, **kwargs)
-
-    # ---------- helper to create placeholder "empty" nodes ----------
+def build_common_tree(n1, n2):
     def create_empty_node(parent):
         return Node(id="empty", attrs={"tag": "empty"}, parent=parent)
 
-    # ---------- helper to merge two single nodes into one common node ----------
     def merge_nodes(a, b, parent):
-        log(f"\nMerging nodes:\n  a: {a}\n\n  b: {b}\n")
+        print(f"Merging nodes:\n  a: {a}\n  b: {b}\n")
         if a is None and b is None:
             return None
         if a is None or b is None:
@@ -195,14 +187,13 @@ def build_common_tree(n1, n2, debug=False):
 
         tag1 = a.attrs.get("tag")
         tag2 = b.attrs.get("tag")
-        log(f"Tags: a: {tag1}, b: {tag2}")
 
         if tag1 == "#text" and tag2 == "#text":
             text1 = a.attrs.get("text", "")
             text2 = b.attrs.get("text", "")
             if text1 == text2:
                 return TextNode(text1, parent=parent)
-            return TextNode("diff", parent=parent)
+            return create_empty_node(parent)
 
         if tag1 == tag2:
             attrs = merge_attrs(a, b)
@@ -211,10 +202,9 @@ def build_common_tree(n1, n2, debug=False):
 
         return create_empty_node(parent)
 
-    # ---------- recursive merge of subtrees rooted at a and b ----------
     def build_down(a, b, parent=None, is_start_root=False):
         node = merge_nodes(a, b, parent)
-        log(
+        print(
             "Building down:\n"
             f"  a:   {a}\n\n"
             f"  b:   {b}\n\n"
@@ -240,87 +230,51 @@ def build_common_tree(n1, n2, debug=False):
 
         return node
 
-    # ---------- build common subtree rooted at the given nodes ----------
-    log("n1:", n1)
-    log("n2:", n2)
-    log("\n\n")
-
     current = build_down(n1, n2, parent=None, is_start_root=True)
     if current is None:
         return None
     current.id = "common_root"
     startingNode = current
-    log("Starting Node:", current)
+    print("Starting Node:", current)
 
-    # ---------- climb parents in lockstep to aligned ancestors ----------
     p1 = n1.parent
     p2 = n2.parent
-    log("\n\nParent 1:", p1)
-    log("\n\nParent 2:", p2)
+    print("p1", p1)
+    print("p2", p2)
+    while p1 is not None and p2 is not None:
+        new_parent = merge_nodes(p1, p2, parent=None)
+        if new_parent is None:
+            break
 
-    cnt = 0
-    while p1.parent is not None and p2.parent is not None:
+        current.parent = new_parent
+        new_parent.children = [current]
+
+        current = new_parent
         p1 = p1.parent
         p2 = p2.parent
-        log("Loop: ", cnt)
-        log("\n\nParent 1:", p1)
-        log("\n\nParent 2:", p2)
-        cnt += 1
 
-    # ---------- build common tree for those ancestor roots ----------
-    log("\n\nBuilding up...\n")
-    parent = build_down(p1, p2, parent=None)
-    log("\n\nBuilding up...\n")
-    log("parent", parent)
-    if debug:
-        walk_tree_verbose(parent)
+    print("Parent Node:",startingNode.parent)
 
-    # ---------- find sibling lists for the original nodes ----------
-    s1 = n1.parent.children
-    s2 = n2.parent.children
-    log("\n\nSiblings 1:", s1)
-    log("\n\nSiblings 2:", s2)
+    parent = startingNode.parent
+    if parent is not None and n1.parent is not None and n2.parent is not None:
+        ch1 = n1.parent.children
+        ch2 = n2.parent.children
+        max_children = max(len(ch1), len(ch2))
+        for i in range(max_children):
+            c1 = ch1[i] if i < len(ch1) else None
+            c2 = ch2[i] if i < len(ch2) else None
 
-    for i1 in range(len(s1)):
-        if s1[i1] == n1:
-            log(i1)
-            log("Sibling 1:", s1[i1])
-            break
+            if c1 is n1 and c2 is n2:
+                child = startingNode
+            else:
+                child = merge_nodes(c1, c2, parent=parent)
 
-    for i2 in range(len(s2)):
-        if s2[i2] == n2:
-            log(i2)
-            log("Sibling 2:", s2[i2])
-            break
+            if child is not None:
+                parent.children.append(child)
 
-    # ---------- align siblings around the starting nodes ----------
-    log("\n\nMerging left siblings starting at indices:", i1, i2)
-    si1 = i1
-    si2 = i2
-    sif = 0
 
-    while i1 - 1 >= 0 and i2 - 1 >= 0:
-        sif += 1
-        i1 -= 1
-        i2 -= 1
 
-    log("sif:", sif)
-    log("\n\nMerging left siblings starting at indices:", i1, i2)
-
-    # ---------- merge sibling subtrees and insert startingNode ----------
-    siblings = []
-    while i1 < len(s1) and i2 < len(s2):
-        log("Merging siblings:\n", s1[i1], "\n", s2[i2])
-        sibling_node = build_down(s1[i1], s2[i2], parent=parent)
-        if sibling_node is not None:
-            siblings.append(sibling_node)
-        i1 += 1
-        i2 += 1
-
-    log("\n\nMerged Siblings:", siblings)
-    parent.children = siblings
-    siblings[sif] = startingNode
-    return parent, startingNode
+    return current
 
 
 
@@ -328,32 +282,15 @@ def build_common_tree(n1, n2, debug=False):
 
 
 if __name__ == "__main__":
-    file1 = (
-        "bug_reports/PRE/postSkip-bug-report/"
-        "postSkip-bug-report-2025-11-25-12-57-03-292812/minified_bug.html"
-    )
-    file2 = (
-        "bug_reports/PRE/postSkip-bug-report/"
-        "postSkip-bug-report-2025-11-25-12-57-40-244373/minified_bug.html"
-    )
+    file1 = "bug_reports/chrome/postSkip-bug-report/postSkip-bug-report-2025-11-24-00-12-28-577512/minified_bug.html"
+    file2 = "bug_reports/chrome/postSkip-bug-report/postSkip-bug-report-2025-11-24-00-12-41-303617/minified_bug.html"
 
     tree1, start1 = html_file_to_tree(file1)
     tree2, start2 = html_file_to_tree(file2)
-
-    print("Tree 1:")
-    walk_tree_verbose(tree1)
-
-    print("\n\nTree 2:")
-    walk_tree(tree2)
-
-    print("\n\nCommon tree...\n")
-    common_tree1, common_root1 = build_common_tree(start1, start2)
-    print("first", common_root1)
-    walk_tree_verbose(common_tree1)
-
-    print("\n\nCommon tree Done\n")
-    common_tree2, common_root2 = build_common_tree(start1, common_root1)
-    print("\n\nCommon tree 2...\n")
-    walk_tree_verbose(common_tree2)
-    print("\n\nCommon tree 2 Done\n")
-
+    walk_tree(start1)
+    print("-----")
+    walk_tree(start2)
+    print("=====")
+    common_root = build_common_tree(start1, start2)
+    print("Common Tree:")
+    walk_tree_verbose(common_root)
