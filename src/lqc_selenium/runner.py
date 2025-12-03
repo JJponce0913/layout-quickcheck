@@ -179,10 +179,9 @@ def should_skip(file):
 
 
 def minify(target_browser, run_subject):
-    pickle_subject = run_subject
-    save_as_web_page(run_subject, "tmp_generated_files/test_pre.html")
+    pickle_subject= run_subject
     #Return True if pattern found, else False
-    shouldSkip = should_skip("tmp_generated_files/test_pre.html")
+    shouldSkip = should_skip("test_pre.html")
     
     print(count_summary)
     
