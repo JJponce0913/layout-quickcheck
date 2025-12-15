@@ -86,7 +86,7 @@ def main():
     # Save summary JSON 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
-    # Print path
+    
     print(out_path)
 
 if __name__ == "__main__":

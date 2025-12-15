@@ -132,15 +132,6 @@ def check_style(html_path, prop, value):
     dot_pat = rf"\.style\.\s*{prop_esc}\s*=\s*['\"]{value_esc}['\"]\s*;"
     return re.search(bracket_pat, body) is not None or re.search(dot_pat, body) is not None
 
-count_summary = {
-    "pattern_and_style": 0,
-    "pattern_only": 0,
-    "style_only": 0,
-    "none": 0
-}
-
-count_summary = {"pattern_and_style": 0, "pattern_only": 0, "style_only": 0, "none": 0}
-
 def should_skip(file):
     any_match = False
     conf = Config()
@@ -163,18 +154,6 @@ def should_skip(file):
                     break
             if styleFound:
                 break
-        
-        # Update count summary
-        if patternFound and styleFound:
-            count_summary["pattern_and_style"] += 1
-            any_match = True
-        elif patternFound and not styleFound:
-            count_summary["pattern_only"] += 1
-        elif not patternFound and styleFound:
-            count_summary["style_only"] += 1
-        else:
-            count_summary["none"] += 1
-        print(f"Rule={rule.get('name','')}, Pattern found: {patternFound}, Style found: {styleFound}")
 
         
     return any_match
@@ -185,7 +164,6 @@ def minify(target_browser, run_subject):
     pickle_subject= run_subject
     shouldSkip = should_skip("test_pre.html")
     
-    print(count_summary)
     if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
         return (run_subject, run_result, pickle_subject, shouldSkip)
