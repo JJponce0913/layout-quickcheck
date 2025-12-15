@@ -28,15 +28,8 @@ def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
         timeout = 5
         poll_frequency = 0.001
         WebDriverWait(webdriver, timeout, poll_frequency=poll_frequency).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        if slow:
-            time.sleep(0.5)
         results = webdriver.execute_script("return checkForBug()")
-        
-        #Printing the diff results
-        """ try:
-            print("Diff:\n" + json.dumps(results, indent=2, default=str))
-        except TypeError:
-            print(f"Diff: {results}") """
+
 
         if results and len(results) > 0:
             #print("Outcome: BUG")

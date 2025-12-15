@@ -18,16 +18,6 @@ class RunResultPass(RunResult):
     def isBug(self):
         return False
 
-
-""" class RunResultCrash(RunResult):
-
-    def __init__(self):
-        super().__init__(BugType.PAGE_CRASH)
-
-    def isBug(self):
-        #BUG Consider Js Errors as non-bugs
-        return True """
-
 class RunResultCrash(RunResult):
 
     def __init__(self):

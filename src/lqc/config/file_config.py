@@ -22,9 +22,7 @@ class FileConfig:
             os.makedirs(self.layout_file_dir)
         if not os.path.exists(self.bug_report_file_dir):
             os.makedirs(self.bug_report_file_dir)
-    
-    def get(self, key, default=None):
-        return getattr(self, "data", {}).get(key, default)
+
 
     def getTimestampFilePath(self):
         timestamp = datetime.now()

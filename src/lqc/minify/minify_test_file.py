@@ -4,17 +4,6 @@ from lqc.generate.css.util.length import matches_length_pattern
 from lqc.model.run_subject import RunSubject
 
 
-class Manipulation:
-    def __init__(self, func, description):
-        self.func = func
-        self.description = description
-
-    def __call__(self, run_subject):
-        return self.func(run_subject)
-
-    def __repr__(self):
-        return f"<Manipulation: {self.description}>"
-
 def elements(tree):
     for element in tree:
         if element["tag"] != "<text>":
@@ -29,8 +18,8 @@ def Minify_RemoveEachElement(run_subject):
         def removeElement(proposed_run_subject, element_id=element_id):
             proposed_run_subject.removeElementById(element_id)
             return proposed_run_subject
-
-        yield Manipulation(removeElement, f"Remove element {element_id}")
+        
+        yield removeElement
 
 
 
@@ -262,10 +251,6 @@ class MinifyStepFactory():
             try:
                 # Attempt to get the next manipulation from the current generator
                 manipulation = next(self.current_generator)
-
-                #PRINT MANIPULATION
-                #print(manipulation)  # shows <Manipulation: Remove element X>
-                #print(f"Applying minimization step from {self.GENERATORS[self.current_generator_index].__name__}")
 
             except StopIteration:
                 # If the current generator is exhausted, move to the next one
