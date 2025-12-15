@@ -30,12 +30,9 @@ def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
         WebDriverWait(webdriver, timeout, poll_frequency=poll_frequency).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         results = webdriver.execute_script("return checkForBug()")
 
-
         if results and len(results) > 0:
-            #print("Outcome: BUG")
             return RunResultLayoutBug(results)
         else:
-            #print("Outcome: PASS")
             return RunResultPass()
     except TimeoutException:
         print("Outcome: TIMEOUT")

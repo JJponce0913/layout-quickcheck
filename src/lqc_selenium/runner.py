@@ -40,9 +40,12 @@ def _save_step_html(run_subject, folder, idx):
     return idx + 1
 
 def minify_debug(target_browser, run_subject):
-    folder = "testminify"
+    folder = "tmp_generated_files/debug"
     idx = _next_html_index(folder)
-    pickle_addre = save_subject(run_subject, "pre")
+    pickle_addr = f"{folder}/pre.pkl"
+    with open(pickle_addr, "wb") as f:
+        pickle.dump(run_subject, f)
+
     print(f"STEP {idx:06d} PRE")
     idx = _save_step_html(run_subject, folder, idx)
     print("Minifying...")
@@ -180,19 +183,13 @@ def should_skip(file):
 
 def minify(target_browser, run_subject):
     pickle_subject= run_subject
-    #Return True if pattern found, else False
     shouldSkip = should_skip("test_pre.html")
     
     print(count_summary)
-    
-    #more runs
-    #fewer bugs
-    #more good bugs
     if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
         return (run_subject, run_result, pickle_subject, shouldSkip)
 
-    #print("Minifying...")
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
@@ -201,7 +198,7 @@ def minify(target_browser, run_subject):
         temp_run_subject = stepsFactory.next_minimization_step(run_subject)
         # If there are no more steps, exit the loop
         if temp_run_subject is None:
-            #print("No more minimization steps available.")
+            # Break out when minimization can't shrink the subject further
             break
 
         # Test the proposed minimized subject in the target browser
@@ -212,7 +209,6 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    #print("Minifying done.")
     return (run_subject, run_result,pickle_subject, shouldSkip)
 
 
@@ -316,5 +312,4 @@ if __name__ == "__main__":
         for exc in counter.crash_exceptions:
             traceback.print_exception(exc["etype"], exc["value"], exc["traceback"])
             print("-"*60 + "\n")
-
 
