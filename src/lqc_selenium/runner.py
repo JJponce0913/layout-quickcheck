@@ -133,18 +133,16 @@ def check_style(html_path, prop, value):
     return re.search(bracket_pat, body) is not None or re.search(dot_pat, body) is not None
 
 def should_skip(file):
-    any_match = False
     conf = Config()
     rules = conf.getRules()
-    for rule in rules:
-        # Get rule class details
-        html_pat = rule.get("html_pattern", [])
-        styles = rule.get("style", [])
+    print(f"Checking {len(rules)} skip rules...")
 
-        # Check HTML pattern
+    for rule in rules:
+        html_pat = rule.get("rule_class", {}).get("html_pattern", [])
+        styles = rule.get("rule_class", {}).get("style", [])
+
         patternFound = check_pattern(file, html_pat)
-        
-        # Check styles
+
         styleFound = False
         for prop, values in styles:
             vals = values if isinstance(values, list) else [values]
@@ -155,14 +153,18 @@ def should_skip(file):
             if styleFound:
                 break
 
-        
-    return any_match
+        if patternFound and styleFound:
+            return True
+
+    return False
 
 
 
 def minify(target_browser, run_subject):
     pickle_subject= run_subject
-    shouldSkip = should_skip("test_pre.html")
+    save_as_web_page(run_subject, "tmp_generated_files/test_pre.html")
+    shouldSkip = should_skip("tmp_generated_files/test_pre.html")
+
     
     if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
@@ -251,6 +253,7 @@ def find_bugs(counter):
 
 
 DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+
 
 if __name__ == "__main__":
 
