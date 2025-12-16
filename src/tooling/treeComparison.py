@@ -1,8 +1,3 @@
-from pathlib import Path
-from bs4 import BeautifulSoup, NavigableString
-import pickle
-import re
-
 class Node:
     def __init__(self, tag=None, id="none", attrs=None, parent=None, base_style=None, modified_style=None, style=None):
         if attrs is None:
@@ -46,22 +41,24 @@ class TextNode:
         return self.parent
 
 def _merge_dicts(d1, d2):
-    keys = set(d1.keys()) | set(d2.keys())
+    keys = set(d1.keys()) & set(d2.keys())
     out = {}
     for k in keys:
-        v1 = d1.get(k, None)
-        v2 = d2.get(k, None)
+        v1 = d1[k]
+        v2 = d2[k]
 
         if isinstance(v1, dict) and isinstance(v2, dict):
-            out[k] = _merge_dicts(v1, v2)
+            merged = _merge_dicts(v1, v2)
+            if merged:
+                out[k] = merged
         elif v1 == v2:
             out[k] = v1
         else:
             out[k] = "diff"
     return out
 
+
 def merge_nodes(a, b, parent=None):
-    print(f"Merging nodes:\n  a: {a}\n  b: {b}\n  parent: {parent}\n")
     if a is None or b is None:
         return None
     
@@ -335,23 +332,3 @@ def merge_trees(a, b):
 
 
 
-if __name__ == "__main__":
-    path1 ="C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/raw/postSkip-bug-report/postSkip-bug-report-2025-12-15-15-00-42-829797/run_subject_pre.pkl"
-
-    path2 ="C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/raw/postSkip-bug-report/postSkip-bug-report-2025-12-15-15-01-10-842821/run_subject_pre.pkl"
-
-    with open(path2, "rb") as f:
-        run_subject1 = pickle.load(f)
-    with open(path2, "rb") as f:
-        run_subject2 = pickle.load(f)
-
-    tree1,startNode1=run_subject_to_node_tree(run_subject1)
-    walk_tree_verbose(tree1)
-    print("Start Node ID:", startNode1 if startNode1 else "None")
-
-    tree2,startNode2=run_subject_to_node_tree(run_subject2)
-    walk_tree_verbose(tree2)
-    print("Start Node ID:", startNode2 if startNode2 else "None")
-
-    node,startCommonNode=merge_trees(startNode1,startNode2)
-    walk_tree_verbose(node)

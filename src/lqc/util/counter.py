@@ -1,6 +1,11 @@
+import time
+import os
+
 class Counter():
 
     def __init__(self, bug_limit=0, test_limit=0, crash_limit=1, feedback_interval=100):
+
+        self.run_id = f"{int(time.time())}_{os.getpid()}"
 
         # Counts
         self.num_tests = 0                  # Total number of tests

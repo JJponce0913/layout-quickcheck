@@ -17,6 +17,7 @@ import pickle
 import inspect, lqc.model.run_subject as rsmod
 import os, uuid, pickle, re
 from bs4 import BeautifulSoup
+import time
 
 
 
@@ -100,21 +101,21 @@ def node_matches(node, spec):
 def check_pattern(filename, pattern):
     with open(filename, "r", encoding="utf-8") as f:
         soup = BeautifulSoup(f, "html.parser")
-    bodies = soup.find_all("body")
-    for body in bodies:
-        contents = visible_contents(body)
-        n, m = len(contents), len(pattern)
-        if m == 0:
-            continue
-        for i in range(0, n - m + 1):
-            ok = True
-            for j in range(m):
-                if not node_matches(contents[i + j], pattern[j]):
-                    ok = False
-                    break
-            if ok:
-                return True
+
+    for body in soup.find_all("body"):
+        kids = [c for c in body.contents if getattr(c, "name", None) or str(c).strip()]
+        tags = []
+        for c in kids:
+            if getattr(c, "name", None):
+                tags.append(c.name)
+            else:
+                tags.append("text")
+
+        if tags == pattern:
+            return True
+
     return False
+
 
 
 def check_style(html_path, prop, value):
@@ -142,7 +143,7 @@ def should_skip(file):
         styles = rule.get("rule_class", {}).get("style", [])
 
         patternFound = check_pattern(file, html_pat)
-
+        
         styleFound = False
         for prop, values in styles:
             vals = values if isinstance(values, list) else [values]
@@ -206,6 +207,15 @@ def find_bugs(counter):
         
         if not run_result.isBug():
             counter.incSuccess()
+            #Take out for safe run_subjects
+            """  os.makedirs("safe", exist_ok=True)
+            print("No bug found. Saving safe run_subject...")
+            pickle_addr = f"bug_reports/safe/safe_{int(time.time())}.pkl"
+
+            with open(pickle_addr, "wb") as f:
+                pickle.dump(run_subject, f)  """
+
+
 
         else:
             # Stage 2 - Minifying Bug
