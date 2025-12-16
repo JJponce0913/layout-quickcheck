@@ -6,7 +6,6 @@ bugreportfiles
 bug_reports
 layoutfiles
 tmp_generated_files
-/temp
 *.log
 node_modules
 jsdist
@@ -23,4 +22,3 @@ results/*
 # Ignore pythong's venv nonsense
 bin/
 lib/
-include/
