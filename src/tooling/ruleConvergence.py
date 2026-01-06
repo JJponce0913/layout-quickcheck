@@ -24,25 +24,34 @@ def load_tree_start_pairs(folder_path):
 
     return pairs
 def check_all_pkls(folder_path, rules):
+    print(f"Checking all pkls in {folder_path} against {len(rules)} rules.")
     results = []
+    total = 0
+
     for root, _, files in os.walk(folder_path):
         for name in files:
             if not name.endswith(".pkl"):
                 continue
+            total += 1
             pkl_path = os.path.join(root, name)
             try:
                 matched = checks(pkl_path, rules)
                 results.append((pkl_path, matched))
             except Exception as e:
                 results.append((pkl_path, f"ERROR: {e}"))
-    false=0
-    true=0
+
+    print(f"Total pkl files found: {total}")
+
+    false = 0
+    true = 0
     for p, r in results:
-        if r==True:
-            false+=1
+        if r == True:
+            true += 1
         else:
-            true+=1
+            false += 1
+
     return results, true, false
+
 def create_html_pat(node):
     """
     Return the html_pattern-style list of direct child tags for the given node.
@@ -87,8 +96,9 @@ def create_rule(html_pattern, styles):
     rule = {
         "name": str(time.time()),
         "rule_class": {
+            "style": styles,
             "html_pattern": html_pattern,
-            "style": styles
+            
         }
     }
     return rule
@@ -188,16 +198,32 @@ def merge_folder(folder_path):
     return curTree, curStartNode
 
 
+import json
+
 if __name__ == "__main__":
-    curTree, curStartNode = merge_folder("C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/skipped-bug-report")
-   
-        
+    curTree, curStartNode = merge_folder(
+        "C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/skipped-bug-report"
+    )
+
     print("\n\nFinal merged tree:")
     walk_tree_verbose(curTree)
-    rules=[create_rule(create_html_pat(curTree),get_styles(curStartNode))]
 
-    results,true,false = check_all_pkls("C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/safe", rules)
-    
+    rule = create_rule(create_html_pat(curTree), get_styles(curStartNode))
+
+    print("\n\nGenerated Rules:")
+    print(rule)
+
+    with open("generated_rule.json", "w", encoding="utf-8") as f:
+        json.dump(rule, f, indent=2)
+
+    results, true, false = check_all_pkls(
+        "C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/non-skipped-bug-report",
+        [rule]
+    )
+
     print("\n\nFinal Results:")
+    print("Results for each pkl:")
+    for p, r in results:
+        print(f"{p}: {r}")
     print(f"positive matches: {true}")
     print(f"negative matches: {false}")
