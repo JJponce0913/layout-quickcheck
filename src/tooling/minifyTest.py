@@ -32,6 +32,20 @@ parser.add_argument("-l", "--crash-limit", help="quit after crashing this many t
 parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
 args = parser.parse_args()
 
+run_id = uuid.uuid4().hex[:10]
+out_dir = os.path.join("bug_reports", "debug_minify_runs", f"run-{run_id}")
+os.makedirs(out_dir, exist_ok=True)
+summary_path = os.path.join(out_dir, "summary.txt")
+
+def write_summary(text):
+    with open(summary_path, "a", encoding="utf-8") as f:
+        f.write(text + "\n")
+
+write_summary(f"run_id: {run_id}")
+write_summary(f"pickle_file: {args.pickle_file}")
+write_summary(f"config_file: {args.config_file}")
+write_summary("")
+
 print(f"Using config file {args.config_file}")
 conf = parse_config(args.config_file)
 Config(conf)
@@ -40,31 +54,52 @@ pickle_addre = args.pickle_file
 with open(pickle_addre, "rb") as f:
     run_subject = pickle.load(f)
 print(f"Loaded run_subject from {pickle_addre}")
+write_summary("loaded run_subject pickle")
 
-save_as_web_page(run_subject, "test.html")
+test_html_path = os.path.join(out_dir, "test.html")
+save_as_web_page(run_subject, test_html_path)
+write_summary(f"wrote test html: {test_html_path}")
 
 target_browser = TargetBrowser()
 (run_result, test_filepath) = test_combination(
     target_browser.getDriver(), run_subject, keep_file=True
 )
 print(f"Tested {test_filepath}")
+write_summary(f"selenium test file: {test_filepath}")
+write_summary(f"initial result type: {getattr(run_result, 'type', None)}")
+write_summary(f"initial isBug: {run_result.isBug() if hasattr(run_result, 'isBug') else None}")
 
 if run_result.type == BugType.PAGE_CRASH:
     print("Found a page that crashes. Minifying...")
+    write_summary("initial finding: page crash")
 else:
     print("Found bug. Minifying...")
+    write_summary("initial finding: bug (non crash)")
 
 (minified_run_subject, minified_run_result, pre_pickle_addre) = minify_debug(
     target_browser, run_subject
 )
 
+write_summary("")
+write_summary("minify result")
+write_summary(f"pre_pickle: {pre_pickle_addre}")
+write_summary(f"minified result type: {getattr(minified_run_result, 'type', None)}")
+write_summary(f"minified isBug: {minified_run_result.isBug() if hasattr(minified_run_result, 'isBug') else None}")
+write_summary(f"minified modified_styles count: {len(minified_run_subject.modified_styles.map) if hasattr(minified_run_subject, 'modified_styles') else None}")
+
+bug_report_url = None
+
 if not minified_run_result.isBug():
     print("False positive (could not reproduce)")
+    write_summary("final status: false positive (could not reproduce)")
 elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
     print("False positive (no modified styles)")
+    write_summary("final status: false positive (no modified styles)")
 else:
     print("Minified bug. Testing variants...")
+    write_summary("final status: minified bug reproduced")
     variants = test_variants(minified_run_subject)
+    write_summary("variants tested")
     print("Variants tested. Saving bug report...")
     url = save_bug_report(
         variants,
@@ -73,6 +108,18 @@ else:
         test_filepath,
         pre_pickle_addre
     )
+    bug_report_url = url
     print(url)
+    write_summary(f"bug report url: {url}")
 
-remove_file(test_filepath)
+try:
+    remove_file(test_filepath)
+    write_summary(f"removed temp file: {test_filepath}")
+except Exception as e:
+    write_summary(f"failed to remove temp file: {test_filepath}")
+    write_summary(f"remove error: {repr(e)}")
+
+write_summary("")
+write_summary(f"outputs saved in: {out_dir}")
+
+print(f"Saved summary to {summary_path}")

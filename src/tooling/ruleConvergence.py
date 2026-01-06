@@ -1,4 +1,5 @@
 from treeComparison import run_subject_to_node_tree, walk_tree, walk_tree_verbose, merge_trees
+from checkFile import check_style,check_pattern
 import os,pickle,time, re
 from bs4 import BeautifulSoup
 from lqc.generate.web_page.create import save_as_web_page
@@ -103,20 +104,7 @@ def create_rule(html_pattern, styles):
     }
     return rule
 
-def check_style(html_path, prop, value):
-    with open(html_path, "r", encoding="utf-8") as f:
-        html = f.read()
-    scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, flags=re.I | re.S)
-    js = "\n".join(scripts)
-    m = re.search(r"function\s+makeStyleChanges\s*\(\s*\)\s*\{(.*?)\}", js, flags=re.S)
-    if not m:
-        return False
-    body = m.group(1)
-    prop_esc = re.escape(prop)
-    value_esc = re.escape(value)
-    bracket_pat = rf"\.style\[\s*['\"]{prop_esc}['\"]\s*\]\s*=\s*['\"]{value_esc}['\"]\s*;"
-    dot_pat = rf"\.style\.\s*{prop_esc}\s*=\s*['\"]{value_esc}['\"]\s*;"
-    return re.search(bracket_pat, body) is not None or re.search(dot_pat, body) is not None
+
 
 def check_pattern(filename, pattern):
     with open(filename, "r", encoding="utf-8") as f:
@@ -201,26 +189,33 @@ def merge_folder(folder_path):
 import json
 
 if __name__ == "__main__":
+    # Part 1 Merges a folder into a singular tree.
     curTree, curStartNode = merge_folder(
         "C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/skipped-bug-report"
     )
 
+    # Part 2 print the merged tree
     print("\n\nFinal merged tree:")
     walk_tree_verbose(curTree)
 
+    # Part 3 create a rule from the merged tree
     rule = create_rule(create_html_pat(curTree), get_styles(curStartNode))
 
+    # Part 4 print the generated rule
     print("\n\nGenerated Rules:")
     print(rule)
 
+    # Part 5 write the rule to a json file
     with open("generated_rule.json", "w", encoding="utf-8") as f:
         json.dump(rule, f, indent=2)
 
+    # Part 6 check the rule against non skipped pkls
     results, true, false = check_all_pkls(
         "C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/non-skipped-bug-report",
         [rule]
     )
 
+    # Part 7 print results and summary counts
     print("\n\nFinal Results:")
     print("Results for each pkl:")
     for p, r in results:
