@@ -200,9 +200,30 @@ def merge_folder(folder_path):
 
 import json
 
+import argparse
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runs", type=int, required=True)
+    args = parser.parse_args()
+
+    if args.runs == 1:
+        base_folder = "bug_reports/test-repo/skipped-bug-report"
+        check_folder = "bug_reports/test-repo/skipped-bug-report"
+    elif args.runs == 2:
+        base_folder = "bug_reports/test-repo/skipped-bug-report"
+        check_folder = "bug_reports/test-repo/non-skipped-bug-report"
+    elif args.runs == 3:
+        base_folder = "bug_reports/test-repo/skipped-bug-report"
+        check_folder = "bug_reports/test-repo/safe"
+    elif args.runs == 4:
+        base_folder = "bug_reports/test-repo/non-skipped-bug-report"
+        check_folder = "bug_reports/test-repo/safe"
+
+
+
     curTree, curStartNode = merge_folder(
-        "C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/skipped-bug-report"
+        f"C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/{base_folder}"
     )
 
     print("\n\nFinal merged tree:")
@@ -217,7 +238,7 @@ if __name__ == "__main__":
         json.dump(rule, f, indent=2)
 
     results, true, false = check_all_pkls(
-        "C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/non-skipped-bug-report",
+        f"C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/{check_folder}",
         [rule]
     )
 
@@ -227,3 +248,4 @@ if __name__ == "__main__":
         print(f"{p}: {r}")
     print(f"positive matches: {true}")
     print(f"negative matches: {false}")
+

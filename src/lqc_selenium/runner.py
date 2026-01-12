@@ -207,13 +207,14 @@ def find_bugs(counter):
         
         if not run_result.isBug():
             counter.incSuccess()
-            #Take out for safe run_subjects
-            """  os.makedirs("safe", exist_ok=True)
-            print("No bug found. Saving safe run_subject...")
-            pickle_addr = f"bug_reports/safe/safe_{int(time.time())}.pkl"
 
-            with open(pickle_addr, "wb") as f:
-                pickle.dump(run_subject, f)  """
+            """ if counter.num_successful % 10000 == 0:
+                os.makedirs("bug_reports/test-repo/safe", exist_ok=True)
+                print("No bug found. Saving safe run_subject...")
+                pickle_addr = f"bug_reports/test-repo/safe/safe_{int(time.time())}.pkl"
+                with open(pickle_addr, "wb") as f:
+                    pickle.dump(run_subject, f) """
+
 
 
 

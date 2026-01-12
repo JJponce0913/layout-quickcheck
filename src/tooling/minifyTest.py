@@ -13,7 +13,7 @@ from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 import lqc.model.run_subject as rsmod
-from lqc_selenium.runner import minify_debug
+from lqc_selenium.runner import minify_debug, minify
 
 DEFAULT_CONFIG_FILE = "./config/config-initial.json"
 
@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser(
     description="""Replay and minify a saved RunSubject pickle for testing the minify function.
 
 examples:
-    debug_minify.py path/to/run_subject.pkl -c ./config/config-initial.json"""
+    minifyTest.py path/to/run_subject.pkl -c ./config/config-initial.json"""
 )
 parser.add_argument("pickle_file", help="path to pickled RunSubject", type=str)
 parser.add_argument("-v", "--verbose", help="increase output verbosity (repeatable argument -v, -vv, -vvv, -vvvv)", action="count", default=0)
@@ -54,9 +54,7 @@ if run_result.type == BugType.PAGE_CRASH:
 else:
     print("Found bug. Minifying...")
 
-(minified_run_subject, minified_run_result, pre_pickle_addre) = minify_debug(
-    target_browser, run_subject
-)
+(minified_run_subject, minified_run_result,pickle_subject, shouldSkip) = minify(target_browser, run_subject)
 
 if not minified_run_result.isBug():
     print("False positive (could not reproduce)")
@@ -67,12 +65,12 @@ else:
     variants = test_variants(minified_run_subject)
     print("Variants tested. Saving bug report...")
     url = save_bug_report(
-        variants,
-        minified_run_subject,
-        minified_run_result,
-        test_filepath,
-        pre_pickle_addre
-    )
+    variants,
+    minified_run_subject,
+    minified_run_result,
+    test_filepath,
+    pickle_subject,
+    shouldSkip)
     print(url)
 
 remove_file(test_filepath)
