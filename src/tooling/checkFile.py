@@ -33,3 +33,28 @@ def check_pattern(filename, pattern):
             return True
 
     return False
+
+def should_skip(file, rules):
+    
+    print(f"Checking {len(rules)} skip rules...")
+
+    for rule in rules:
+        html_pat = rule.get("rule_class", {}).get("html_pattern", [])
+        styles = rule.get("rule_class", {}).get("style", [])
+
+        patternFound = check_pattern(file, html_pat)
+        
+        styleFound = False
+        for prop, values in styles:
+            vals = values if isinstance(values, list) else [values]
+            for v in vals:
+                if check_style(file, prop, v):
+                    styleFound = True
+                    break
+            if styleFound:
+                break
+
+        if patternFound and styleFound:
+            return True
+
+    return False

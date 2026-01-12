@@ -1,8 +1,9 @@
 from treeComparison import run_subject_to_node_tree, walk_tree, walk_tree_verbose, merge_trees
-from checkFile import check_style,check_pattern
+from checkFile import should_skip
 import os,pickle,time, re
 from bs4 import BeautifulSoup
 from lqc.generate.web_page.create import save_as_web_page
+
 
 def load_tree_start_pairs(folder_path):
     pairs = []
@@ -142,28 +143,9 @@ def checks(pkl_path, rules):
     save_as_web_page(run_subject, "tmp_generated_files/rule_check.html", run_result=None)
     file = "tmp_generated_files/rule_check.html"
 
-    for i, rule in enumerate(rules):
-        html_pat = rule.get("rule_class", {}).get("html_pattern", [])
-        styles = rule.get("rule_class", {}).get("style", [])
+    should_be_skip = should_skip(file, rules)
 
-        patternFound = check_pattern(file, html_pat)
-
-        styleFound = False
-        styleHit = None
-        for prop, values in styles:
-            vals = values if isinstance(values, list) else [values]
-            for v in vals:
-                if check_style(file, prop, v):
-                    styleFound = True
-                    styleHit = (prop, v)
-                    break
-            if styleFound:
-                break
-
-        if patternFound and styleFound:
-            return True
-
-    return False
+    return should_be_skip
 
 
 def merge_folder(folder_path):

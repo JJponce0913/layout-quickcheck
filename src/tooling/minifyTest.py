@@ -15,7 +15,9 @@ from lqc_selenium.selenium_harness.layout_tester import test_combination
 import lqc.model.run_subject as rsmod
 from lqc_selenium.runner import minify_debug, minify
 
-DEFAULT_CONFIG_FILE = "./config/config-initial.json"
+DEFAULT_CONFIG_FILE = "./config/change.json"
+
+PICKLE_OVERRIDE = None
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -24,13 +26,20 @@ parser = argparse.ArgumentParser(
 examples:
     minifyTest.py path/to/run_subject.pkl -c ./config/config-initial.json"""
 )
-parser.add_argument("pickle_file", help="path to pickled RunSubject", type=str)
+parser.add_argument("pickle_file", nargs="?", help="path to pickled RunSubject", type=str)
 parser.add_argument("-v", "--verbose", help="increase output verbosity (repeatable argument -v, -vv, -vvv, -vvvv)", action="count", default=0)
 parser.add_argument("-b", "--bug-limit", help="quit after finding this many bugs", type=int, default=0)
 parser.add_argument("-t", "--test-limit", help="quit after running this many tests", type=int, default=0)
 parser.add_argument("-l", "--crash-limit", help="quit after crashing this many times", type=int, default=1)
 parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
 args = parser.parse_args()
+
+if PICKLE_OVERRIDE is not None:
+    pickle_addre = PICKLE_OVERRIDE
+elif args.pickle_file is not None:
+    pickle_addre = args.pickle_file
+else:
+    raise RuntimeError("No pickle path provided")
 
 run_id = uuid.uuid4().hex[:10]
 out_dir = os.path.join("bug_reports", "debug_minify_runs", f"run-{run_id}")
@@ -42,7 +51,7 @@ def write_summary(text):
         f.write(text + "\n")
 
 write_summary(f"run_id: {run_id}")
-write_summary(f"pickle_file: {args.pickle_file}")
+write_summary(f"pickle_file: {pickle_addre}")
 write_summary(f"config_file: {args.config_file}")
 write_summary("")
 
@@ -50,7 +59,6 @@ print(f"Using config file {args.config_file}")
 conf = parse_config(args.config_file)
 Config(conf)
 
-pickle_addre = args.pickle_file
 with open(pickle_addre, "rb") as f:
     run_subject = pickle.load(f)
 print(f"Loaded run_subject from {pickle_addre}")
@@ -76,7 +84,7 @@ else:
     print("Found bug. Minifying...")
     write_summary("initial finding: bug (non crash)")
 
-(minified_run_subject, minified_run_result, pre_pickle_addre) = minify_debug(
+(minified_run_subject, minified_run_result, pre_pickle_addre,shouldSkip) = minify(
     target_browser, run_subject
 )
 
@@ -106,7 +114,8 @@ else:
         minified_run_subject,
         minified_run_result,
         test_filepath,
-        pre_pickle_addre
+        pre_pickle_addre,
+        shouldSkip
     )
     print(url)
     write_summary(f"bug report url: {url}")

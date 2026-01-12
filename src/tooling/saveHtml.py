@@ -1,4 +1,4 @@
-pickle_addre="C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/bug_reports/test-repo/safe/safe_1767679263.pkl"
+pickle_addre=None
 import pickle
 from lqc.generate.web_page.create import save_as_web_page
 

@@ -18,7 +18,7 @@ import inspect, lqc.model.run_subject as rsmod
 import os, uuid, pickle, re
 from bs4 import BeautifulSoup
 import time
-from tooling.checkFile import check_style
+from tooling.checkFile import check_style, check_pattern,should_skip
 
 
 
@@ -102,38 +102,12 @@ def node_matches(node, spec):
 
 
 
-def should_skip(file):
+def minify(target_browser, run_subject):
+    prerun_subject= run_subject
+    save_as_web_page(run_subject, "tmp_generated_files/test_pre.html")
     conf = Config()
     rules = conf.getRules()
-    print(f"Checking {len(rules)} skip rules...")
-
-    for rule in rules:
-        html_pat = rule.get("rule_class", {}).get("html_pattern", [])
-        styles = rule.get("rule_class", {}).get("style", [])
-
-        patternFound = check_pattern(file, html_pat)
-        
-        styleFound = False
-        for prop, values in styles:
-            vals = values if isinstance(values, list) else [values]
-            for v in vals:
-                if check_style(file, prop, v):
-                    styleFound = True
-                    break
-            if styleFound:
-                break
-
-        if patternFound and styleFound:
-            return True
-
-    return False
-
-
-
-def minify(target_browser, run_subject):
-    pickle_subject= run_subject
-    save_as_web_page(run_subject, "tmp_generated_files/test_pre.html")
-    shouldSkip = should_skip("tmp_generated_files/test_pre.html")
+    shouldSkip = should_skip("tmp_generated_files/test_pre.html",rules)
 
     #Skipes minimization if shouldSkip is True
     """ 
@@ -160,7 +134,7 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,pickle_subject, shouldSkip)
+    return (run_subject, run_result,prerun_subject, shouldSkip)
 
 
 
@@ -177,12 +151,12 @@ def find_bugs(counter):
         if not run_result.isBug():
             counter.incSuccess()
 
-            """ if counter.num_successful % 10000 == 0:
+            if counter.num_successful % 10000 == 0:
                 os.makedirs("bug_reports/test-repo/safe", exist_ok=True)
                 print("No bug found. Saving safe run_subject...")
                 pickle_addr = f"bug_reports/test-repo/safe/safe_{int(time.time())}.pkl"
                 with open(pickle_addr, "wb") as f:
-                    pickle.dump(run_subject, f) """
+                    pickle.dump(run_subject, f)
 
 
 
@@ -194,8 +168,8 @@ def find_bugs(counter):
                 
             else:
                 print("Found bug. Minifying...")
-
-            (minified_run_subject, minified_run_result,pickle_subject, shouldSkip) = minify(target_browser, run_subject)
+            prerun_subject = run_subject
+            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, prerun_subject)
 
             # False Positive Detection
             if not minified_run_result.isBug():
@@ -221,7 +195,7 @@ def find_bugs(counter):
                     minified_run_subject,
                     minified_run_result,
                     test_filepath,
-                    pickle_subject,
+                    prerun_subject,
                     shouldSkip
                 )
                 print(url)
