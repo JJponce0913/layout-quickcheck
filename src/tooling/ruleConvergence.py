@@ -1,20 +1,22 @@
-from treeComparison import run_subject_to_node_tree, walk_tree, walk_tree_verbose, merge_trees
-from checkFile import should_skip
-import os,pickle,time, re
+import os
+import pickle
+import time
+import json
+import argparse
 from bs4 import BeautifulSoup
+
+from .treeComparison import run_subject_to_node_tree, walk_tree_verbose, merge_trees
 from lqc.generate.web_page.create import save_as_web_page
 
 
 def load_tree_start_pairs(folder_path):
     pairs = []
-
     for root, _, files in os.walk(folder_path):
         for name in files:
-            if not name.endswith(".pkl"):
+            if not name.endswith("minified_run_subject.pkl"):
                 continue
             if "run_subject" not in name:
                 continue
-
             pkl_path = os.path.join(root, name)
             try:
                 with open(pkl_path, "rb") as f:
@@ -23,8 +25,9 @@ def load_tree_start_pairs(folder_path):
                 pairs.append((tree, start_node))
             except Exception:
                 continue
-
     return pairs
+
+
 def check_all_pkls(folder_path, rules):
     print(f"Checking all pkls in {folder_path} against {len(rules)} rules.")
     results = []
@@ -32,38 +35,62 @@ def check_all_pkls(folder_path, rules):
 
     for root, _, files in os.walk(folder_path):
         for name in files:
-            if not name.endswith("run_subject_prerun.pkl"):
+            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name):
                 continue
             total += 1
             pkl_path = os.path.join(root, name)
             try:
-                matched = checks(pkl_path, rules)
+                with open(pkl_path, "rb") as f:
+                    run_subject = pickle.load(f)
+                matched = should_skip(run_subject, rules)
                 results.append((pkl_path, matched))
             except Exception as e:
                 results.append((pkl_path, f"ERROR: {e}"))
 
     print(f"Total pkl files found: {total}")
 
-    false = 0
-    true = 0
-    for p, r in results:
-        if r == True:
-            true += 1
+    true_count = 0
+    false_count = 0
+    for _, r in results:
+        if r is True:
+            true_count += 1
         else:
-            false += 1
+            false_count += 1
 
-    return results, true, false
+    return results, true_count, false_count
 
-def create_html_pat(node):
-    """
-    Return the html_pattern-style list of direct child tags for the given node.
-    Uses "text" for text nodes (#text) with non-empty content, mirroring check_pattern().
-    """
+
+def extract_tag_tree(node):
     if node is None:
-        return []
+        return None
+
+    if isinstance(node, dict):
+        tag = node.get("tag")
+        children = node.get("children", []) or []
+    else:
+        tag = getattr(node, "tag", None)
+        children = getattr(node, "children", []) or []
+
+    out_children = []
+    for c in children:
+        t = extract_tag_tree(c)
+        if t is not None:
+            out_children.append(t)
+
+    if tag == "body":
+        return out_children
+
+    if not out_children:
+        return tag
+
+    return [tag, out_children]
+
+
+def extract_tag_tree_with_ids(node):
+    if node is None:
+        return None
 
     def _children(n):
-        # Prefer our Node.children list; fall back to firstchild/next chain if present.
         kids = getattr(n, "children", None)
         if kids is not None:
             return kids
@@ -74,37 +101,81 @@ def create_html_pat(node):
             child = getattr(child, "next", None)
         return chain
 
-    pattern = []
-    for child in _children(node):
-        tag = getattr(child, "tag", None)
+    def build(n):
+        tag = getattr(n, "tag", None)
         if tag == "#text":
-            text_val = getattr(child, "text", "")
+            text_val = getattr(n, "text", "")
             if isinstance(text_val, str) and not text_val.strip():
-                continue
-            pattern.append("text")
-        elif tag:
-            pattern.append(tag)
+                return None
+            return {"tag": "text"}
 
-    return pattern
+        if not tag:
+            return None
+
+        entry = {"tag": tag}
+
+        node_id = getattr(n, "id", None)
+        if node_id and node_id != "none":
+            entry["id"] = node_id
+
+        kids = []
+        for c in _children(n):
+            child_entry = build(c)
+            if child_entry is not None:
+                kids.append(child_entry)
+
+        entry["children"] = kids
+        return entry
+
+    return build(node)
+
 
 def get_styles(node):
     if node is None:
-        return {}
-    pairs= []
+        return []
+    pairs = []
     for pair in list(node.modified_style.items()):
         pairs.append(list(pair))
     return pairs
+
+
+def get_all_styles(node):
+    if node is None:
+        return {}
+
+    out = {}
+
+    def dfs(n):
+        if n is None:
+            return
+        if getattr(n, "tag", None) == "#text":
+            return
+
+        node_id = getattr(n, "id", "none")
+        base = getattr(n, "base_style", None)
+        modified = getattr(n, "modified_style", None)
+
+        if base or modified:
+            out[node_id] = {
+                "base_style": dict(base) if base else {},
+                "modified_style": dict(modified) if modified else {},
+            }
+
+        for c in getattr(n, "children", []) or []:
+            dfs(c)
+
+    dfs(node)
+    return out
+
+
 def create_rule(html_pattern, styles):
-    rule = {
+    return {
         "name": str(time.time()),
         "rule_class": {
             "style": styles,
             "html_pattern": html_pattern,
-            
-        }
+        },
     }
-    return rule
-
 
 
 def check_pattern(filename, pattern):
@@ -136,16 +207,7 @@ def check_pattern(filename, pattern):
     return False
 
 
-def checks(pkl_path, rules):
-    with open(pkl_path, "rb") as f:
-        run_subject = pickle.load(f)
 
-    save_as_web_page(run_subject, "tmp_generated_files/rule_check.html", run_result=None)
-    file = "tmp_generated_files/rule_check.html"
-
-    should_be_skip = should_skip(file, rules)
-
-    return should_be_skip
 
 
 def merge_folder(folder_path):
@@ -155,26 +217,329 @@ def merge_folder(folder_path):
     if len(pairs) < 2:
         raise RuntimeError("Need at least 2 run_subject files to merge")
 
-    _, curStartNode = pairs.pop(0)
-    _, secondStartNode = pairs.pop(0)
+    _, cur_start = pairs.pop(0)
+    _, other_start = pairs.pop(0)
 
-    curTree, curStartNode = merge_trees(curStartNode, secondStartNode)
-    merge_count = 1
+    cur_tree, cur_start = merge_trees(cur_start, other_start)
 
     for _, start_node in pairs:
-        curTree, curStartNode = merge_trees(curStartNode, start_node)
-        merge_count += 1
+        cur_tree, cur_start = merge_trees(cur_start, start_node)
 
-    return curTree, curStartNode
+    return cur_tree, cur_start
 
 
-import json
+def node_to_ordered_tokens(root, include_text=True):
+    def keep_text(n):
+        txt = getattr(n, "text", "")
+        return (not isinstance(txt, str)) or bool(txt.strip())
 
-import argparse
+    def build_token(n):
+        if n is None:
+            return None
+
+        tag = getattr(n, "tag", None)
+
+        if tag == "#text":
+            if not include_text:
+                return None
+            if not keep_text(n):
+                return None
+            return "#text"
+
+        if not tag:
+            return None
+
+        kids = []
+        for c in getattr(n, "children", []) or []:
+            v = build_token(c)
+            if v is not None:
+                kids.append(v)
+
+        if not kids:
+            return tag
+        return [tag, kids]
+
+    out = []
+    for c in getattr(root, "children", []) or []:
+        v = build_token(c)
+        if v is not None:
+            out.append(v)
+    return out
+
+
+def all_ordered_patterns_unique(tree_root, include_text=True, contiguous=True):
+    tokens = node_to_ordered_tokens(tree_root, include_text=include_text)
+
+    def freeze(x):
+        if isinstance(x, list):
+            return tuple(freeze(y) for y in x)
+        return x
+
+    def unfreeze(x):
+        if isinstance(x, tuple):
+            return [unfreeze(y) for y in x]
+        return x
+
+    def dedupe_choices(choices):
+        seen = set()
+        out = []
+        for c in choices:
+            fc = freeze(c)
+            if fc not in seen:
+                seen.add(fc)
+                out.append(c)
+        return out
+
+    def patterns_from_sequence(token_choices):
+        token_choices = [dedupe_choices(c) for c in token_choices]
+        n = len(token_choices)
+        out = set()
+
+        if contiguous:
+            for i in range(n):
+                acc = [[]]
+                for j in range(i, n):
+                    nxt = []
+                    for a in acc:
+                        for c in token_choices[j]:
+                            nxt.append(a + [c])
+                    acc = nxt
+                    for seq in acc:
+                        if seq:
+                            out.add(freeze(seq))
+            return [unfreeze(p) for p in out]
+
+        idxs_all = []
+        cur = []
+
+        def rec(i):
+            if i == n:
+                if cur:
+                    idxs_all.append(cur[:])
+                return
+            cur.append(i)
+            rec(i + 1)
+            cur.pop()
+            rec(i + 1)
+
+        rec(0)
+
+        for idxs in idxs_all:
+            pools = [token_choices[i] for i in idxs]
+            acc = [[]]
+            for choices in pools:
+                nxt = []
+                for a in acc:
+                    for c in choices:
+                        nxt.append(a + [c])
+                acc = nxt
+            for seq in acc:
+                if seq:
+                    out.add(freeze(seq))
+
+        return [unfreeze(p) for p in out]
+
+    def subtree_variants(node):
+        if not isinstance(node, list):
+            return [node]
+        tag = node[0]
+        kids = node[1] if len(node) > 1 and isinstance(node[1], list) else []
+        out = [tag]
+        if kids:
+            kid_choices = [expand_token(t) for t in kids]
+            for kp in patterns_from_sequence(kid_choices):
+                out.append([tag, kp])
+        return dedupe_choices(out)
+
+    def expand_token(tok):
+        if isinstance(tok, str):
+            if tok == "#text" and not include_text:
+                return []
+            return [tok]
+        return subtree_variants(tok)
+
+    token_choices = [expand_token(t) for t in tokens]
+    token_choices = [dedupe_choices(c) for c in token_choices]
+    patterns = patterns_from_sequence(token_choices)
+
+    seen = set()
+    unique = []
+    for p in patterns:
+        fp = freeze(p)
+        if fp not in seen:
+            seen.add(fp)
+            unique.append(p)
+    return unique
+
+
+def pattern_to_key(p):
+    return json.dumps(p, separators=(",", ":"), ensure_ascii=False)
+
+
+def _node_id(n):
+    nid = getattr(n, "id", None)
+    if nid and nid != "none":
+        return nid
+    return None
+
+
+def _children(n):
+    return getattr(n, "children", []) or []
+
+
+def _match_sequence_exact(nodes, pat, include_text=True):
+    out_ids = []
+    for n, t in zip(nodes, pat):
+        tag = getattr(n, "tag", None)
+
+        if isinstance(t, str):
+            if t == "#text":
+                if not include_text:
+                    return (False, [])
+                if tag != "#text":
+                    return (False, [])
+                txt = getattr(n, "text", "")
+                if isinstance(txt, str) and not txt.strip():
+                    return (False, [])
+            else:
+                if tag != t:
+                    return (False, [])
+                nid = _node_id(n)
+                if nid:
+                    out_ids.append(nid)
+            continue
+
+        if not isinstance(t, list) or len(t) != 2:
+            return (False, [])
+
+        want_tag, kid_pat = t[0], t[1]
+        if tag != want_tag:
+            return (False, [])
+
+        nid = _node_id(n)
+        if nid:
+            out_ids.append(nid)
+
+        ok, kid_ids = _match_sequence_anywhere(_children(n), kid_pat, include_text=include_text)
+        if not ok:
+            return (False, [])
+        out_ids.extend(kid_ids)
+
+    return (True, out_ids)
+
+
+def _match_sequence_anywhere(nodes, pat, include_text=True):
+    m = len(pat)
+    if m == 0:
+        return (True, [])
+    for i in range(0, len(nodes) - m + 1):
+        ok, ids = _match_sequence_exact(nodes[i : i + m], pat, include_text=include_text)
+        if ok:
+            return (True, ids)
+    return (False, [])
+
+
+def _walk_all_nodes(root):
+    stack = [root]
+    while stack:
+        n = stack.pop()
+        yield n
+        for c in reversed(_children(n)):
+            stack.append(c)
+
+
+def ids_by_pattern(tree_root, patterns, include_text=True):
+    out = {pattern_to_key(p): [] for p in patterns}
+
+    for n in _walk_all_nodes(tree_root):
+        kids = _children(n)
+        if not kids:
+            continue
+
+        for p in patterns:
+            key = pattern_to_key(p)
+            m = len(p)
+            if m == 0 or len(kids) < m:
+                continue
+
+            for i in range(0, len(kids) - m + 1):
+                ok, ids = _match_sequence_exact(kids[i : i + m], p, include_text=include_text)
+                if ok:
+                    out[key].append(ids)
+
+    return out
+
+def id_with_styles(styles_list, styles):
+    ids = []
+    for node_id, data in styles_list.items():
+        modified = data.get("modified_style", {})
+        match = True
+        for k, v in styles:
+            if modified.get(k) != v:
+                match = False
+                break
+        if match:
+            ids.append(node_id)
+    return ids
+
+def follow_html_and_style_pattern(style_ids, mapping, html_pattern):
+    key = pattern_to_key(html_pattern) if isinstance(html_pattern, list) else html_pattern
+    pattern_hits = mapping.get(key, [])
+
+    for node_id in style_ids:
+        for hit in pattern_hits:
+            if node_id in hit:
+                return True
+    return False
+
+
+
+def should_skip(run_subject, rules):
+    tree, start_node = run_subject_to_node_tree(run_subject)
+    print(f"Checking {len(rules)} skip rules...")
+    styles_list = get_all_styles(tree)
+    patterns=all_ordered_patterns_unique(tree)
+    mapping = ids_by_pattern(tree, patterns, include_text=True)
+    for rule in rules:
+        html_pat = rule.get("rule_class", {}).get("html_pattern", [])
+        styles = rule.get("rule_class", {}).get("style", [])
+        style_ids=(id_with_styles(styles_list,styles))
+        shouldSkip=follow_html_and_style_pattern(style_ids, mapping, html_pat)
+        if shouldSkip:
+            print(f"Rule matched, should skip.")
+            return True
+    print("No rules matched, should not skip.")
+    return False
+    
+
+def run_pipeline(base_folder, check_folder, include_text=True):
+    cur_tree, cur_start = merge_folder(base_folder)
+
+    print("\n\nFinal merged tree:")
+    walk_tree_verbose(cur_tree)
+
+    rule = create_rule(extract_tag_tree(cur_tree), get_styles(cur_start))
+    print(get_styles(cur_start))
+    print("\n\nGenerated Rules:")
+    print(rule)
+
+    with open("generated_rule.json", "w", encoding="utf-8") as f:
+        json.dump(rule, f, indent=2)
+
+    results, true_count, false_count = check_all_pkls(check_folder, [rule])
+
+    print("\n\nFinal Results:")
+    print("Results for each pkl:")
+    for p, r in results:
+        print(f"{p}: {r}")
+    print(f"positive matches: {true_count}")
+    print(f"negative matches: {false_count}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--runs", type=int, required=True)
+    parser.add_argument("--include_text", action="store_true")
     args = parser.parse_args()
 
     if args.runs == 1:
@@ -189,39 +554,10 @@ if __name__ == "__main__":
     elif args.runs == 4:
         base_folder = "bug_reports/test-repo/non-skipped-bug-report"
         check_folder = "bug_reports/test-repo/safe"
+    else:
+        raise ValueError("--runs must be 1, 2, 3, or 4")
 
+    base_folder_abs = f"C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/{base_folder}"
+    check_folder_abs = f"C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/{check_folder}"
 
-
-    curTree, curStartNode = merge_folder(
-        f"C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/{base_folder}"
-    )
-
-    # Part 2 print the merged tree
-    print("\n\nFinal merged tree:")
-    walk_tree_verbose(curTree)
-
-    # Part 3 create a rule from the merged tree
-    rule = create_rule(create_html_pat(curTree), get_styles(curStartNode))
-
-    # Part 4 print the generated rule
-    print("\n\nGenerated Rules:")
-    print(rule)
-
-    # Part 5 write the rule to a json file
-    with open("generated_rule.json", "w", encoding="utf-8") as f:
-        json.dump(rule, f, indent=2)
-
-    # Part 6 check the rule against non skipped pkls
-    results, true, false = check_all_pkls(
-        f"C:/Users/pika1/source/repos/JJponce0913/layout-quickcheck/{check_folder}",
-        [rule]
-    )
-
-    # Part 7 print results and summary counts
-    print("\n\nFinal Results:")
-    print("Results for each pkl:")
-    for p, r in results:
-        print(f"{p}: {r}")
-    print(f"positive matches: {true}")
-    print(f"negative matches: {false}")
-
+    run_pipeline(base_folder_abs, check_folder_abs, include_text=args.include_text)

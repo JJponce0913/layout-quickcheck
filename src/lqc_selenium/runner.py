@@ -18,7 +18,7 @@ import inspect, lqc.model.run_subject as rsmod
 import os, uuid, pickle, re
 from bs4 import BeautifulSoup
 import time
-from tooling.checkFile import check_style, check_pattern,should_skip
+from tooling.ruleConvergence import should_skip
 
 
 
@@ -103,11 +103,11 @@ def node_matches(node, spec):
 
 
 def minify(target_browser, run_subject):
-    prerun_subject= run_subject
-    save_as_web_page(run_subject, "tmp_generated_files/test_pre.html")
+    prerun_subject = run_subject
     conf = Config()
     rules = conf.getRules()
-    shouldSkip = should_skip("tmp_generated_files/test_pre.html",rules)
+
+    shouldSkip = should_skip(run_subject,rules)
 
     #Skipes minimization if shouldSkip is True
     """ 
