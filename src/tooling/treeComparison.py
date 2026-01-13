@@ -148,16 +148,18 @@ def run_subject_to_node_tree(run_subject):
 def walk_tree(n, depth=0):
     indent = "  " * depth
 
-    if isinstance(n, TextNode) or n.tag == "#text":
-        print(indent + "TextNode: " + repr(n.attrs.get("text", "")))
+    if (isinstance(n, TextNode) or n.tag == "#text"):
+        print(n)
+        print(indent + "TextNode: " + n.text)
+        
     else:
         label = n.tag if n.tag else ""
         if n.id != "none":
             label += f"#{n.id}"
         print(indent + label)
-
-    for child in n.children:
-        walk_tree(child, depth + 1)
+    if not (isinstance(n, TextNode) or n.tag == "#text"):
+        for child in n.children:
+            walk_tree(child, depth + 1)
 
 def walk_tree_verbose(n, depth=0):
     indent = "  " * depth

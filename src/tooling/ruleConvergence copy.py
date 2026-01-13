@@ -32,8 +32,12 @@ def check_all_pkls(folder_path, rules):
 
     for root, _, files in os.walk(folder_path):
         for name in files:
-            if not name.endswith("run_subject_prerun.pkl"):
+            print(f"Processing file: {name}")
+            print(not name.endswith("run_subject_prerun.pkl"))
+            print(not "safe" in name)
+            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name):
                 continue
+
             total += 1
             pkl_path = os.path.join(root, name)
             try:
@@ -54,16 +58,39 @@ def check_all_pkls(folder_path, rules):
 
     return results, true, false
 
-def create_html_pat(node):
-    """
-    Return the html_pattern-style list of direct child tags for the given node.
-    Uses "text" for text nodes (#text) with non-empty content, mirroring check_pattern().
-    """
+#output: Rule for JSON
+def extract_tag_tree(node):
     if node is None:
-        return []
+        return None
+
+    if isinstance(node, dict):
+        tag = node.get("tag")
+        children = node.get("children", []) or []
+    else:
+        tag = getattr(node, "tag", None)
+        children = getattr(node, "children", []) or []
+    out_children = []
+    for c in children:
+        t = extract_tag_tree(c)
+        if t is not None:
+            out_children.append(t)
+
+    if tag == "body":
+        return out_children
+
+    if not out_children:
+        return tag
+
+    return [tag, out_children]
+
+    return pattern
+
+#output: HTML Tree for Searching with a rule
+def extract_tag_tree_with_ids(node):
+    if node is None:
+        return None
 
     def _children(n):
-        # Prefer our Node.children list; fall back to firstchild/next chain if present.
         kids = getattr(n, "children", None)
         if kids is not None:
             return kids
@@ -74,26 +101,75 @@ def create_html_pat(node):
             child = getattr(child, "next", None)
         return chain
 
-    pattern = []
-    for child in _children(node):
-        tag = getattr(child, "tag", None)
+    def build(n):
+        tag = getattr(n, "tag", None)
         if tag == "#text":
-            text_val = getattr(child, "text", "")
+            text_val = getattr(n, "text", "")
             if isinstance(text_val, str) and not text_val.strip():
-                continue
-            pattern.append("text")
-        elif tag:
-            pattern.append(tag)
+                return None
+            return {"tag": "text"}
 
-    return pattern
+        if not tag:
+            return None
+
+        entry = {"tag": tag}
+
+        node_id = getattr(n, "id", None)
+        if node_id and node_id != "none":
+            entry["id"] = node_id
+
+        kids = []
+        for c in _children(n):
+            child_entry = build(c)
+            if child_entry is not None:
+                kids.append(child_entry)
+
+        entry["children"] = kids
+        return entry
+
+    return build(node)
+
+
 
 def get_styles(node):
+    print(node)
     if node is None:
         return {}
     pairs= []
     for pair in list(node.modified_style.items()):
         pairs.append(list(pair))
     return pairs
+
+def get_all_styles(node):
+    if node is None:
+        return {}
+
+    out = {}
+
+    def dfs(n):
+        if n is None:
+            return
+        if getattr(n, "tag", None) == "#text":
+            return
+
+        node_id = getattr(n, "id", "none")
+        base = getattr(n, "base_style", None)
+        modified = getattr(n, "modified_style", None)
+
+        if base or modified:
+            out[node_id] = {
+                "base_style": dict(base) if base else {},
+                "modified_style": dict(modified) if modified else {}
+            }
+
+        for c in getattr(n, "children", []) or []:
+            dfs(c)
+
+    dfs(node)
+    return out
+
+
+
 def create_rule(html_pattern, styles):
     rule = {
         "name": str(time.time()),
@@ -189,7 +265,7 @@ if __name__ == "__main__":
     elif args.runs == 4:
         base_folder = "bug_reports/test-repo/non-skipped-bug-report"
         check_folder = "bug_reports/test-repo/safe"
-
+    
 
 
     curTree, curStartNode = merge_folder(
@@ -201,7 +277,7 @@ if __name__ == "__main__":
     walk_tree_verbose(curTree)
 
     # Part 3 create a rule from the merged tree
-    rule = create_rule(create_html_pat(curTree), get_styles(curStartNode))
+    rule = create_rule(extract_tag_tree(curTree), get_styles(curStartNode))
 
     # Part 4 print the generated rule
     print("\n\nGenerated Rules:")
