@@ -29,26 +29,27 @@ def load_tree_start_pairs(folder_path):
 
 
 def check_all_pkls(folder_path, rules):
-    print(f"Checking all pkls in {folder_path} against {len(rules)} rules.")
+    #print(f"Checking all pkls in {folder_path} against {len(rules)} rules.")
     results = []
     total = 0
 
     for root, _, files in os.walk(folder_path):
         for name in files:
-            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name):
+
+            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "bug" in name):
                 continue
             total += 1
             pkl_path = os.path.join(root, name)
             try:
                 with open(pkl_path, "rb") as f:
                     run_subject = pickle.load(f)
-                print(f"Rules  {rules}...")
+                #print(f"Rules  {rules}...")
                 matched = should_skip(run_subject, rules)
                 results.append((pkl_path, matched))
             except Exception as e:
                 results.append((pkl_path, f"ERROR: {e}"))
 
-    print(f"Total pkl files found: {total}")
+    #print(f"Total pkl files found: {total}")
 
     true_count = 0
     false_count = 0
@@ -438,6 +439,80 @@ def _match_sequence_anywhere(nodes, pat, include_text=True):
     return (False, [])
 
 
+def _pattern_has_diff(p):
+    if isinstance(p, str):
+        return p == "diff"
+    if isinstance(p, list):
+        return any(_pattern_has_diff(x) for x in p)
+    return False
+
+
+def _match_sequence_exact_wild(nodes, pat, include_text=True):
+    def keep_text(n):
+        txt = getattr(n, "text", "")
+        return (not isinstance(txt, str)) or bool(txt.strip())
+
+    out_ids = []
+    for n, t in zip(nodes, pat):
+        tag = getattr(n, "tag", None)
+
+        if isinstance(t, str):
+            if t == "diff":
+                if tag == "#text":
+                    if not include_text or not keep_text(n):
+                        return (False, [])
+                else:
+                    nid = _node_id(n)
+                    if nid:
+                        out_ids.append(nid)
+                continue
+            if t == "#text":
+                if not include_text:
+                    return (False, [])
+                if tag != "#text":
+                    return (False, [])
+                if not keep_text(n):
+                    return (False, [])
+            else:
+                if tag != t:
+                    return (False, [])
+                nid = _node_id(n)
+                if nid:
+                    out_ids.append(nid)
+            continue
+
+        if not isinstance(t, list) or len(t) != 2:
+            return (False, [])
+
+        want_tag, kid_pat = t[0], t[1]
+        if want_tag != "diff" and tag != want_tag:
+            return (False, [])
+        if tag == "#text":
+            return (False, [])
+
+        nid = _node_id(n)
+        if nid:
+            out_ids.append(nid)
+
+        ok, kid_ids = _match_sequence_anywhere_wild(_children(n), kid_pat, include_text=include_text)
+        if not ok:
+            return (False, [])
+        out_ids.extend(kid_ids)
+
+    return (True, out_ids)
+
+
+def _match_sequence_anywhere_wild(nodes, pat, include_text=True):
+    m = len(pat)
+    if m == 0:
+        return (True, [])
+    for i in range(0, len(nodes) - m + 1):
+        ok, ids = _match_sequence_exact_wild(nodes[i : i + m], pat, include_text=include_text)
+        if ok:
+            return (True, ids)
+    return (False, [])
+
+
 def _walk_all_nodes(root):
     stack = [root]
     while stack:
@@ -474,6 +549,9 @@ def id_with_styles(styles_list, styles):
         modified = data.get("modified_style", {})
         match = True
         for k, v in styles:
+            # Treat the literal value "diff" as a wildcard (any value allowed).
+            if v == "diff":
+                continue
             if modified.get(k) != v:
                 match = False
                 break
@@ -481,7 +559,15 @@ def id_with_styles(styles_list, styles):
             ids.append(node_id)
     return ids
 
-def follow_html_and_style_pattern(style_ids, mapping, html_pattern):
+def follow_html_and_style_pattern(style_ids, mapping, html_pattern, tree_root):
+    if _pattern_has_diff(html_pattern):
+        pat = html_pattern if isinstance(html_pattern, list) else [html_pattern]
+        for hit in _iter_pattern_hits_wild(tree_root, pat, include_text=True):
+            for node_id in style_ids:
+                if node_id in hit:
+                    return True
+        return False
+
     key = pattern_to_key(html_pattern) if isinstance(html_pattern, list) else html_pattern
     pattern_hits = mapping.get(key, [])
 
@@ -492,10 +578,22 @@ def follow_html_and_style_pattern(style_ids, mapping, html_pattern):
     return False
 
 
+def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
+    m = len(pat)
+    for n in _walk_all_nodes(tree_root):
+        kids = _children(n)
+        if not kids or len(kids) < m:
+            continue
+        for i in range(0, len(kids) - m + 1):
+            ok, ids = _match_sequence_exact_wild(kids[i : i + m], pat, include_text=include_text)
+            if ok:
+                yield ids
+
+
 
 def should_skip(run_subject, rules):
     tree, start_node = run_subject_to_node_tree(run_subject)
-    print(f"Checking {len(rules)} skip rules...")
+    #print(f"Checking {len(rules)} skip rules...")
     styles_list = get_all_styles(tree)
     patterns=all_ordered_patterns_unique(tree)
     mapping = ids_by_pattern(tree, patterns, include_text=True)
@@ -503,11 +601,11 @@ def should_skip(run_subject, rules):
         html_pat = rule.get("rule_class", {}).get("html_pattern", [])
         styles = rule.get("rule_class", {}).get("style", [])
         style_ids=(id_with_styles(styles_list,styles))
-        shouldSkip=follow_html_and_style_pattern(style_ids, mapping, html_pat)
+        shouldSkip=follow_html_and_style_pattern(style_ids, mapping, html_pat, tree)
         if shouldSkip:
             print(f"Rule matched, should skip.")
             return True
-    print("No rules matched, should not skip.")
+    #print("No rules matched, should not skip.")
     return False
     
 
