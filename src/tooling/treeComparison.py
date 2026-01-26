@@ -1,19 +1,18 @@
+import pickle
+
 class Node:
-    def __init__(self, tag=None, id="none", attrs=None, parent=None, base_style=None, modified_style=None, style=None):
+    def __init__(self, tag=None, id="none", attrs=None, parent=None, base_style=None, modified_style=None):
         if attrs is None:
             attrs = {}
         if base_style is None:
             base_style = {}
         if modified_style is None:
             modified_style = {}
-        if style is None:
-            style = {}
 
         self.id = id
         self.tag =tag
         self.base_style = base_style
         self.modified_style = modified_style
-        self.style = style
         self.parent = parent
         self.children = []
 
@@ -23,7 +22,7 @@ class Node:
         return (
         f"Node(tag={self.tag}, id={self.id}, parent_id={parent_id}, "
         f"children={len(self.children)}, "
-        f"base_style={self.base_style}, modified_style={self.modified_style}, style={self.style})")
+        f"base_style={self.base_style}, modified_style={self.modified_style})")
 
     def get_parent(self):
         return self.parent
@@ -70,14 +69,13 @@ def merge_nodes(a, b, parent=None):
         return TextNode(text, parent=parent)
 
     if a_is_text or b_is_text:
-        return Node(tag="diff", id="empty", parent=parent, base_style={}, modified_style={}, style={})
+        return Node(tag="diff", id="empty", parent=parent, base_style={}, modified_style={})
 
     tag = a.tag if a.tag == b.tag else "diff"
     node_id = a.id if a.id == b.id else "diff"
 
     base_style = _merge_dicts(getattr(a, "base_style", {}) or {}, getattr(b, "base_style", {}) or {})
     modified_style = _merge_dicts(getattr(a, "modified_style", {}) or {}, getattr(b, "modified_style", {}) or {})
-    style = _merge_dicts(getattr(a, "style", {}) or {}, getattr(b, "style", {}) or {})
 
     return Node(
         tag=tag,
@@ -85,8 +83,14 @@ def merge_nodes(a, b, parent=None):
         parent=parent,
         base_style=base_style,
         modified_style=modified_style,
-        style=style,
     )
+
+def pickle_to_node_tree(pickle_path):
+    with open(pickle_path, "rb") as f:
+        run_subject = pickle.load(f)
+    return run_subject_to_node_tree(run_subject)
+
+
 
 def run_subject_to_node_tree(run_subject):
     base_map = getattr(run_subject.base_styles, "map", {}) or {}
@@ -121,7 +125,7 @@ def run_subject_to_node_tree(run_subject):
         if node_id != "none":
             b, m, combined = merged_style_for(node_id)
 
-        n = Node(tag=tag, id=node_id, attrs=attrs, parent=parent, base_style=b, modified_style=m, style=combined)
+        n = Node(tag=tag, id=node_id, attrs=attrs, parent=parent, base_style=b, modified_style=m)
 
         if startnodeID is None and m:
             startnodeID = n
@@ -175,7 +179,6 @@ def walk_tree_verbose(n, depth=0):
     print(f"{indent}  parent_id: {parent_id}")
     print(f"{indent}  base_style: {n.base_style}")
     print(f"{indent}  modified_style: {n.modified_style}")
-    print(f"{indent}  style: {n.style}")
     print(f"{indent}  children_count: {len(n.children)}")
 
     for child in n.children:

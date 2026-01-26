@@ -5,7 +5,7 @@ import json
 import argparse
 from bs4 import BeautifulSoup
 
-from .treeComparison import run_subject_to_node_tree, walk_tree_verbose, merge_trees
+from tooling.treeComparison import run_subject_to_node_tree, walk_tree_verbose, merge_trees
 from lqc.generate.web_page.create import save_as_web_page
 
 
@@ -42,6 +42,7 @@ def check_all_pkls(folder_path, rules):
             try:
                 with open(pkl_path, "rb") as f:
                     run_subject = pickle.load(f)
+                print(f"Rules  {rules}...")
                 matched = should_skip(run_subject, rules)
                 results.append((pkl_path, matched))
             except Exception as e:
@@ -205,8 +206,6 @@ def check_pattern(filename, pattern):
             return True
 
     return False
-
-
 
 
 
@@ -547,7 +546,7 @@ if __name__ == "__main__":
         check_folder = "bug_reports/test-repo/skipped-bug-report"
     elif args.runs == 2:
         base_folder = "bug_reports/test-repo/skipped-bug-report"
-        check_folder = "bug_reports/test-repo/non-skipped-bug-report"
+        check_folder = "bug_reports/test-repo2/non-skipped-bug-report"
     elif args.runs == 3:
         base_folder = "bug_reports/test-repo/skipped-bug-report"
         check_folder = "bug_reports/test-repo/safe"

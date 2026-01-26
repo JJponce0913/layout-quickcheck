@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
+"""
+Verbosely enters a pickle through the minification process.
 
+Example usage from the project root
+
+python src/lqc_selenium/minifyTest.py path/to/run_subject.pkl -c ./config/change.json
+"""
 import sys, traceback, argparse, os, uuid, pickle, inspect
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file

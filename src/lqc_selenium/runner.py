@@ -106,6 +106,7 @@ def minify(target_browser, run_subject):
     prerun_subject = run_subject
     conf = Config()
     rules = conf.getRules()
+    print(f"Rules  {rules}...")
 
     shouldSkip = should_skip(run_subject,rules)
 
@@ -152,9 +153,9 @@ def find_bugs(counter):
             counter.incSuccess()
 
             if counter.num_successful % 1000 == 0:
-                os.makedirs("bug_reports/test-repo/safe", exist_ok=True)
+                os.makedirs("bug_reports/test-repo2/safe", exist_ok=True)
                 print("No bug found. Saving safe run_subject...")
-                pickle_addr = f"bug_reports/test-repo/safe/safe_{int(time.time())}.pkl"
+                pickle_addr = f"bug_reports/test-repo2/safe/safe_{int(time.time())}.pkl"
                 with open(pickle_addr, "wb") as f:
                     pickle.dump(run_subject, f)
 
