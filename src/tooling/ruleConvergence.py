@@ -388,11 +388,13 @@ def _node_id(n):
 def _children(n):
     return getattr(n, "children", []) or []
 
-
 def _match_sequence_exact(nodes, pat, include_text=True):
     out_ids = []
     for n, t in zip(nodes, pat):
         tag = getattr(n, "tag", None)
+
+        if isinstance(t, list) and len(t) == 1 and isinstance(t[0], str):
+            t = t[0]
 
         if isinstance(t, str):
             if t == "#text":
@@ -430,6 +432,7 @@ def _match_sequence_exact(nodes, pat, include_text=True):
     return (True, out_ids)
 
 
+
 def _match_sequence_anywhere(nodes, pat, include_text=True):
     m = len(pat)
     if m == 0:
@@ -448,7 +451,6 @@ def _pattern_has_diff(p):
         return any(_pattern_has_diff(x) for x in p)
     return False
 
-
 def _match_sequence_exact_wild(nodes, pat, include_text=True):
     def keep_text(n):
         txt = getattr(n, "text", "")
@@ -457,6 +459,9 @@ def _match_sequence_exact_wild(nodes, pat, include_text=True):
     out_ids = []
     for n, t in zip(nodes, pat):
         tag = getattr(n, "tag", None)
+
+        if isinstance(t, list) and len(t) == 1 and isinstance(t[0], str):
+            t = t[0]
 
         if isinstance(t, str):
             if t == "diff":
@@ -502,6 +507,7 @@ def _match_sequence_exact_wild(nodes, pat, include_text=True):
         out_ids.extend(kid_ids)
 
     return (True, out_ids)
+
 
 
 def _match_sequence_anywhere_wild(nodes, pat, include_text=True):

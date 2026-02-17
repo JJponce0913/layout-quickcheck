@@ -70,7 +70,7 @@ def minified_pkls(*roots):
     for root in roots:
         for dirpath, dirnames, filenames in os.walk(root):
             for name in filenames:
-                if name == "minified_run_subject.pkl"or name == "run_subject.pkl":
+                if name == "minified_run_subject.pkl" or name == "run_subject.pkl":
                     paths.append(os.path.join(dirpath, name))
     random.shuffle(paths)
     for p in paths:
@@ -201,8 +201,8 @@ def merge_converge_known_bugs(known_dir, safe_dir, max_merges_per_run=1, max_pai
     return merges_done
 
 gen = minified_pkls(
-    r"bug_reports/test-repo2/skipped-bug-report",
-    r"bug_reports/test-repo2/non-skipped-bug-report",
+    r"bug_reports/test-repo_temp",
+    
 )
 
 working_dir = f"bug_reports/sortRepo-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
@@ -220,7 +220,7 @@ print()
 
 for i, p in enumerate(gen, start=1):
     known_dir = os.path.join(working_dir, "known-bugs")
-    user_input = input(f"\nCheck Bug '{i},{p}'? (yes/no): ").strip().lower()
+    #user_input = input(f"\nCheck Bug '{i},{p}'? (yes/no): ").strip().lower()
     if i % 10 == 0:
             print("CONVERGENCE_PASS", i)
             merge_converge_known_bugs(
