@@ -29,27 +29,28 @@ def load_tree_start_pairs(folder_path):
 
 
 def check_all_pkls(folder_path, rules):
-    #print(f"Checking all pkls in {folder_path} against {len(rules)} rules.")
     results = []
     total = 0
+    folder_name = os.path.basename(os.path.normpath(folder_path))
 
     for root, _, files in os.walk(folder_path):
         for name in files:
-
-            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "bug" in name):
+            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "run_subject.pkl" in name):
                 continue
+
             total += 1
             pkl_path = os.path.join(root, name)
             try:
                 with open(pkl_path, "rb") as f:
                     run_subject = pickle.load(f)
-                #print(f"Rules  {rules}...")
-                matched = should_skip(run_subject, rules)
-                results.append((pkl_path, matched))
-            except Exception as e:
-                results.append((pkl_path, f"ERROR: {e}"))
 
-    #print(f"Total pkl files found: {total}")
+                matched = should_skip(run_subject, rules)
+                print(f"[{folder_name}] {name}: {matched}")
+                results.append((pkl_path, matched))
+
+            except Exception as e:
+                print(f"[{folder_name}] {name}: ERROR {e}")
+                results.append((pkl_path, f"ERROR: {e}"))
 
     true_count = 0
     false_count = 0
@@ -60,6 +61,7 @@ def check_all_pkls(folder_path, rules):
             false_count += 1
 
     return results, true_count, false_count
+
 
 
 def extract_tag_tree(node):
@@ -593,20 +595,28 @@ def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
 
 def should_skip(run_subject, rules):
     tree, start_node = run_subject_to_node_tree(run_subject)
-    #print(f"Checking {len(rules)} skip rules...")
     styles_list = get_all_styles(tree)
-    patterns=all_ordered_patterns_unique(tree)
+    patterns = all_ordered_patterns_unique(tree)
     mapping = ids_by_pattern(tree, patterns, include_text=True)
+
     for rule in rules:
         html_pat = rule.get("rule_class", {}).get("html_pattern", [])
         styles = rule.get("rule_class", {}).get("style", [])
-        style_ids=(id_with_styles(styles_list,styles))
-        shouldSkip=follow_html_and_style_pattern(style_ids, mapping, html_pat, tree)
-        if shouldSkip:
-            print(f"Rule matched, should skip.")
+
+        style_ids = id_with_styles(styles_list, styles)
+        print("Style check result ids")
+        print(style_ids)
+
+        html_match = follow_html_and_style_pattern(style_ids, mapping, html_pat, tree)
+        print("HTML pattern check result")
+        print(html_match)
+
+        if html_match:
+            print("Rule matched, should skip.")
             return True
-    #print("No rules matched, should not skip.")
+
     return False
+
     
 
 def run_pipeline(base_folder, check_folder, include_text=True):

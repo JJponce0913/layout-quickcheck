@@ -91,7 +91,6 @@ def pickle_to_node_tree(pickle_path):
     return run_subject_to_node_tree(run_subject)
 
 
-
 def run_subject_to_node_tree(run_subject):
     base_map = getattr(run_subject.base_styles, "map", {}) or {}
     mod_map = getattr(run_subject.modified_styles, "map", {}) or {}
@@ -114,40 +113,70 @@ def run_subject_to_node_tree(run_subject):
         if el.get("tag") == "<text>":
             return TextNode(el.get("value", ""), parent=parent)
 
-        attrs = {k: v for k, v in el.items() if k != "children"}
-        tag = attrs.pop("tag", "")
-        node_id = attrs.get("id", "none")
+        tag = el.get("tag", "")
+        node_id = el.get("id", "none")
 
         if str(node_id) == "lqc_dev_controls":
             return None
 
-        b, m, combined = {}, {}, {}
+        b, m = {}, {}
         if node_id != "none":
-            b, m, combined = merged_style_for(node_id)
+            b, m, _ = merged_style_for(node_id)
 
-        n = Node(tag=tag, id=node_id, attrs=attrs, parent=parent, base_style=b, modified_style=m)
+        n = Node(tag=tag, id=node_id, parent=parent, base_style=b, modified_style=m)
 
         if startnodeID is None and m:
             startnodeID = n
 
         for child in el.get("children", []):
-            child_node = element_dict_to_node(child, parent=n)
-            if child_node is not None:
-                n.children.append(child_node)
+            cn = element_dict_to_node(child, parent=n)
+            if cn is not None:
+                n.children.append(cn)
 
         return n
+
+    def coalesce_text_nodes(node):
+        if node is None:
+            return
+
+        if isinstance(node, TextNode) or node.tag == "#text":
+            return
+
+        new_children = []
+        buffer = None
+
+        for child in node.children:
+            if isinstance(child, TextNode) or child.tag == "#text":
+                if buffer is None:
+                    buffer = TextNode(child.text, parent=node)
+                else:
+                    buffer.text += child.text
+            else:
+                if buffer is not None:
+                    new_children.append(buffer)
+                    buffer = None
+                coalesce_text_nodes(child)
+                new_children.append(child)
+
+        if buffer is not None:
+            new_children.append(buffer)
+
+        node.children = new_children
 
     tree = run_subject.html_tree.tree
 
     if isinstance(tree, list):
-        root = Node(tag="body", id="Root", attrs={}, parent=None)
+        root = Node(tag="body", id="Root", parent=None)
         for child in tree:
             cn = element_dict_to_node(child, parent=root)
             if cn is not None:
                 root.children.append(cn)
+
+        coalesce_text_nodes(root)
         return root, startnodeID
 
     raise Exception("Incorrect tree format in run_subject")
+
 
 def walk_tree(n, depth=0):
     indent = "  " * depth

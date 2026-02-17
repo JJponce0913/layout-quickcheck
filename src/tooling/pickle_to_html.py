@@ -2,9 +2,8 @@
 This script loads a run_subject object from a pickle file and renders it into a  HTML file.
 
 Example usage from the project root:
-python src/tooling/saveHtml.py path/to/run_subject.pkl
-
-The output HTML file will be written to test.html in the current working directory.
+python src/tooling/pickle_to_html.py path/to/run_subject.pkl
+the current working directory.
 """
 
 import sys
