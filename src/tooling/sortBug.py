@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tooling.treeComparison import run_subject_to_node_tree, merge_trees, walk_tree_verbose
-from tooling.ruleConvergence import check_all_pkls, create_rule, extract_tag_tree, get_styles
+from tooling.ruleConvergence import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles
 from lqc.generate.web_page.create import save_as_web_page
 
 
@@ -70,11 +70,18 @@ def minified_pkls(*roots):
     for root in roots:
         for dirpath, dirnames, filenames in os.walk(root):
             for name in filenames:
-                if name == "minified_run_subject.pkl"or name == "run_subject.pkl":
+                if name == "minified_run_subject.pkl" or name == "run_subject.pkl":
                     paths.append(os.path.join(dirpath, name))
     random.shuffle(paths)
     for p in paths:
         yield p
+
+def pattern_token_count(p):
+    if isinstance(p, str):
+        return 1
+    if isinstance(p, list):
+        return sum(pattern_token_count(x) for x in p)
+    return 0
 
 def load_merged_tree_from_group(group_dir):
     p = os.path.join(group_dir, "merged_tree.pkl")
@@ -93,14 +100,26 @@ def group_dirs(known_dir):
     return out
 
 
+def rule_is_usable(rule):
+    rc = rule.get("rule_class", {})
+    pattern = rc.get("html_pattern", [])
+    modified_styles = rc.get("modified_style", [])
+    has_real_modified = any(v != "diff" for _, v in modified_styles)
+    return pattern_token_count(pattern) > 1 and has_real_modified
+
+
 def can_merge_two_groups(group_a_dir, group_b_dir, safe_dir):
     _, a_start = load_merged_tree_from_group(group_a_dir)
     _, b_start = load_merged_tree_from_group(group_b_dir)
 
     temp_tree, temp_start = merge_trees(a_start, b_start)
-    rule = create_rule(extract_tag_tree(temp_tree), get_styles(temp_start))
+    rule = create_rule(
+        extract_tag_tree(temp_tree),
+        get_base_styles(temp_start),
+        get_modified_styles(temp_start),
+    )
 
-    if rule["rule_class"]["style"] == []:
+    if not rule_is_usable(rule):
         return False, None
 
     _, a_true, a_false = check_all_pkls(group_a_dir, [rule])
@@ -200,9 +219,10 @@ def merge_converge_known_bugs(known_dir, safe_dir, max_merges_per_run=1, max_pai
 
     return merges_done
 
+
 gen = minified_pkls(
-    r"bug_reports/test-repo2/skipped-bug-report",
     r"bug_reports/test-repo2/non-skipped-bug-report",
+    r"bug_reports/test-repo2/skipped-bug-report",
 )
 
 working_dir = f"bug_reports/sortRepo-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
@@ -220,16 +240,16 @@ print()
 
 for i, p in enumerate(gen, start=1):
     known_dir = os.path.join(working_dir, "known-bugs")
-    user_input = input(f"\nCheck Bug '{i},{p}'? (yes/no): ").strip().lower()
+
     if i % 10 == 0:
-            print("CONVERGENCE_PASS", i)
-            merge_converge_known_bugs(
-                known_dir=known_dir,
-                safe_dir=safe_dir,
-                max_merges_per_run=1,
-                max_pairs_to_try=50
-            )
-    # rest of your bug sorting logic
+        print("CONVERGENCE_PASS", i)
+        merge_converge_known_bugs(
+            known_dir=known_dir,
+            safe_dir=safe_dir,
+            max_merges_per_run=1,
+            max_pairs_to_try=50,
+        )
+
     banner(f"INPUT #{i}")
     kv("minified_pickle", p)
     kv("source_dir", os.path.dirname(p))
@@ -245,8 +265,6 @@ for i, p in enumerate(gen, start=1):
     added_to_known = False
 
     for bugFolder in os.listdir(os.path.join(working_dir, "known-bugs")):
-        
-         
         section(f"TRY KNOWN GROUP: {bugFolder}")
         bugGroupPath = os.path.join(working_dir, "known-bugs", bugFolder)
         pkl_path = os.path.join(bugGroupPath, "merged_tree.pkl")
@@ -260,13 +278,20 @@ for i, p in enumerate(gen, start=1):
 
         temp_tree, temp_startnode = merge_trees(startnode, merged_tree_startnode)
 
-        rule = create_rule(extract_tag_tree(temp_tree), get_styles(temp_startnode))
+        rule = create_rule(
+            extract_tag_tree(temp_tree),
+            get_base_styles(temp_startnode),
+            get_modified_styles(temp_startnode),
+        )
+
         kv("rule_name", rule.get("name", "<none>"), indent=2)
-        kv("style_count", len(rule["rule_class"]["style"]), indent=2)
+        kv("style_count", len(rule["rule_class"]["base_style"]), indent=2)
+        kv("modified_style_count", len(rule["rule_class"]["modified_style"]), indent=2)
+        kv("pattern_len", len(rule["rule_class"]["html_pattern"]), indent=2)
         kv("pattern_root", rule["rule_class"]["html_pattern"][0] if rule["rule_class"]["html_pattern"] else "<empty>", indent=2)
 
-        if rule["rule_class"]["style"] == []:
-            kv("status", "skip, empty style", indent=2)
+        if not rule_is_usable(rule):
+            kv("decision", "skip this group, rule not usable", indent=2)
             continue
 
         results_bug, true_bug, false_bug = check_all_pkls(bugGroupPath, [rule])
@@ -309,7 +334,7 @@ for i, p in enumerate(gen, start=1):
             merged_path = os.path.join(bugGroupPath, "merged_tree.pkl")
             with open(merged_path, "wb") as f:
                 pickle.dump((temp_tree, temp_startnode), f)
-            
+
             with open(os.path.join(bugGroupPath, "merged_tree.txt"), "w", encoding="utf-8") as f:
                 with redirect_stdout(f):
                     walk_tree_verbose(temp_tree)
@@ -340,31 +365,36 @@ for i, p in enumerate(gen, start=1):
             unknown_tree, unknown_tree_startnode = pickle.load(f)
 
         temp_tree, temp_startnode = merge_trees(startnode, unknown_tree_startnode)
-        rule = create_rule(extract_tag_tree(temp_tree), get_styles(temp_startnode))
+
+        rule = create_rule(
+            extract_tag_tree(temp_tree),
+            get_base_styles(temp_startnode),
+            get_modified_styles(temp_startnode),
+        )
 
         kv("rule_name", rule.get("name", "<none>"), indent=2)
-        kv("rule", rule, indent=2)
-        kv("style_count", len(rule["rule_class"]["style"]), indent=2)
+        kv("base_style", rule["rule_class"]["base_style"], indent=2)
+        kv("modified_style", rule["rule_class"]["modified_style"], indent=2)
+        kv("html_pattern", rule["rule_class"]["html_pattern"], indent=2)
+        kv("style_count", len(rule["rule_class"]["base_style"]), indent=2)
+        kv("modified_style_count", len(rule["rule_class"]["modified_style"]), indent=2)
+        kv("pattern_len", len(rule["rule_class"]["html_pattern"]), indent=2)
 
-        if rule["rule_class"]["style"] == []:
-            kv("status", "skip, empty style", indent=2)
+        if not rule_is_usable(rule):
+            kv("decision", "skip unknown instance, rule not usable", indent=2)
             continue
-
-        results_u, true_u, false_u = check_all_pkls(bugInstancePath, [rule])
-        list_results("unknown instance sample", results_u, max_items=10, indent=2)
-        result_summary("unknown instance totals", true_u, false_u, indent=2)
 
         results_safe, true_safe, false_safe = check_all_pkls(safe_dir, [rule])
         list_results("safe folder sample", results_safe, max_items=10, indent=2)
 
-        try:
-            ratio = true_safe / false_safe
-        except ZeroDivisionError:
+        if false_safe == 0:
             ratio = float("inf")
+        else:
+            ratio = true_safe / false_safe
 
         result_summary("safe folder totals", true_safe, false_safe, ratio=ratio, indent=2)
 
-        if ratio == 0:
+        if true_safe == 0:
             section("DECISION: PROMOTE UNKNOWN INSTANCE TO NEW KNOWN GROUP")
             kv("reason", "rule matches none of safe", indent=2)
 
@@ -416,9 +446,7 @@ for i, p in enumerate(gen, start=1):
             added_to_known = True
             break
 
-        else:
-            kv("decision", "keep unknown instance as unknown", indent=2)
-            continue
+        kv("decision", "keep unknown instance as unknown", indent=2)
 
     if added_to_known:
         section("INPUT HANDLED")

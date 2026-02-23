@@ -134,7 +134,7 @@ def extract_tag_tree_with_ids(node):
     return build(node)
 
 
-def get_styles(node):
+def get_modified_styles(node):
     if node is None:
         return []
     pairs = []
@@ -142,6 +142,13 @@ def get_styles(node):
         pairs.append(list(pair))
     return pairs
 
+def get_base_styles(node):
+    if node is None:
+        return []
+    pairs = []
+    for pair in list(node.base_style.items()):
+        pairs.append(list(pair))
+    return pairs
 
 def get_all_styles(node):
     if node is None:
@@ -172,11 +179,12 @@ def get_all_styles(node):
     return out
 
 
-def create_rule(html_pattern, styles):
+def create_rule(html_pattern,base_style, modified_style):
     return {
         "name": str(time.time()),
         "rule_class": {
-            "style": styles,
+            "base_style": base_style,
+            "modified_style": modified_style,
             "html_pattern": html_pattern,
         },
     }
@@ -551,20 +559,35 @@ def ids_by_pattern(tree_root, patterns, include_text=True):
 
     return out
 
-def id_with_styles(styles_list, styles):
+def id_with_styles(styles_list, base_styles, modified_styles):
     ids = []
+
     for node_id, data in styles_list.items():
+        base = data.get("base_style", {})
         modified = data.get("modified_style", {})
+
         match = True
-        for k, v in styles:
-            # Treat the literal value "diff" as a wildcard (any value allowed).
+
+        for k, v in base_styles:
+            if v == "diff":
+                continue
+            if base.get(k) != v:
+                match = False
+                break
+
+        if not match:
+            continue
+
+        for k, v in modified_styles:
             if v == "diff":
                 continue
             if modified.get(k) != v:
                 match = False
                 break
+
         if match:
             ids.append(node_id)
+
     return ids
 
 def follow_html_and_style_pattern(style_ids, mapping, html_pattern, tree_root):
@@ -607,9 +630,10 @@ def should_skip(run_subject, rules):
 
     for rule in rules:
         html_pat = rule.get("rule_class", {}).get("html_pattern", [])
-        styles = rule.get("rule_class", {}).get("style", [])
+        base_styles=rule.get("rule_class", {}).get("base_style", [])
+        modified_styles = rule.get("rule_class", {}).get("modified_style", [])
 
-        style_ids = id_with_styles(styles_list, styles)
+        style_ids = id_with_styles(styles_list, base_styles, modified_styles)
         print("Style check result ids")
         print(style_ids)
 
@@ -631,7 +655,7 @@ def run_pipeline(base_folder, check_folder, include_text=True):
     print("\n\nFinal merged tree:")
     walk_tree_verbose(cur_tree)
 
-    rule = create_rule(extract_tag_tree(cur_tree), get_styles(cur_start))
+    rule = create_rule(extract_tag_tree(cur_tree), get_styles(cur_start), get_modified_styles(cur_start))
     print(get_styles(cur_start))
     print("\n\nGenerated Rules:")
     print(rule)
