@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
 
-import sys, traceback, argparse
+import argparse
+import os
+import pickle
+import re
+import sys
+import traceback
+
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
+from lqc.generate.web_page.create import save_as_web_page
 from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
-from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc.util.counter import Counter
-from lqc.generate.web_page.create import save_as_web_page
-
+from lqc_selenium.report.bug_report_helper import save_bug_report
+from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from lqc_selenium.selenium_harness.layout_tester import test_combination
-import pickle
-import inspect, lqc.model.run_subject as rsmod
-import os, uuid, pickle, re
-from bs4 import BeautifulSoup
-import time
-from tooling.ruleConvergence import should_skip
-
+from tree import should_skip
 
 
 def _ensure_dir(d):
@@ -106,15 +105,13 @@ def minify(target_browser, run_subject):
     prerun_subject = run_subject
     conf = Config()
     rules = conf.getRules()
-    print(f"Rules  {rules}...")
 
     shouldSkip = should_skip(run_subject,rules)
 
-    #Skipes minimization if shouldSkip is True
-    """ 
+    #Skipe minimization if shouldSkip is True
     if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, pickle_subject, shouldSkip) """
+        return (run_subject, run_result, prerun_subject, shouldSkip) 
 
     stepsFactory = MinifyStepFactory()
 
@@ -151,17 +148,6 @@ def find_bugs(counter):
         
         if not run_result.isBug():
             counter.incSuccess()
-
-            """             if counter.num_successful % 10 == 0:
-            os.makedirs("bug_reports/test-repo2/safe", exist_ok=True)
-            print("No bug found. Saving safe run_subject...")
-            pickle_addr = f"bug_reports/test-repo2/safe/safe_{int(time.time())}.pkl"
-            with open(pickle_addr, "wb") as f:
-                pickle.dump(run_subject, f) """
-
-
-
-
         else:
             # Stage 2 - Minifying Bug
             if run_result.type == BugType.PAGE_CRASH:
@@ -210,7 +196,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/change.json"
+DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
 
 if __name__ == "__main__":
 

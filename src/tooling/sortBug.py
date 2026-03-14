@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tooling.treeComparison import run_subject_to_node_tree, merge_trees, walk_tree_verbose
-from tooling.ruleConvergence import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles
+from tree import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles
 from lqc.generate.web_page.create import save_as_web_page
 
 
