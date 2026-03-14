@@ -13,54 +13,42 @@ from lqc.model.run_subject import RunSubject
 
 def save_bug_report(
     variants,
-    minified_run_subject: RunSubject,
     run_result: RunResult,
     original_filepath,
     prerun_subject: RunSubject,
-    shouldSkip
+    minified_run_subject: RunSubject = None,
 ):
     file_config = FileConfig()
 
-    #doesn't save bug report if shouldSkip is true
-    """ if shouldSkip:
-        return ("Skipped Bug - Not Saving Report")
-    else:
-        bug_folder = file_config.getCustomTimestampBugReport("postSkip-bug-report") """
-    if shouldSkip:
-        bug_folder = file_config.getCustomTimestampBugReport("skipped-bug-report") 
-    else:
-        bug_folder = file_config.getCustomTimestampBugReport("non-skipped-bug-report") 
+    bug_folder = file_config.getCustomTimestampBugReport("bug-directory")
 
-    # Create a folder to hold all the bug report files
     os.mkdir(bug_folder)
 
-    # Copy the original file
     bug_filepath = os.path.join(bug_folder, "original_bug.html")
     shutil.copy(original_filepath, bug_filepath)
 
-    # Copy the minimized bug
+    subject_to_save = minified_run_subject if minified_run_subject is not None else prerun_subject
+
     minified_bug = os.path.join(bug_folder, "minified_bug.html")
     print(f"Saving minimized bug to {minified_bug}")
-    save_as_web_page(minified_run_subject, minified_bug, run_result=run_result)
+    save_as_web_page(subject_to_save, minified_bug, run_result=run_result)
     copyExternalJSFiles(bug_folder)
 
-    # Custom bug helper file - JSON file
-    styles_used = list(minified_run_subject.all_style_names())
+    styles_used = list(subject_to_save.all_style_names())
     styles_used.sort()
     styles_used_string = ",".join(styles_used)
-    base_styles = list(minified_run_subject.base_styles.all_style_names())
-    modified_styles = list(minified_run_subject.modified_styles.all_style_names())
+    base_styles = list(subject_to_save.base_styles.all_style_names())
+    modified_styles = list(subject_to_save.modified_styles.all_style_names())
     bug_type = "Page Crash" if run_result.type == BugType.PAGE_CRASH else "Under Invalidation"
 
-    
-    pickle_addr = f"{bug_folder}/minified_run_subject.pkl"
+    pickle_addr = os.path.join(bug_folder, "run_subject.pkl")
     with open(pickle_addr, "wb") as f:
-        pickle.dump(minified_run_subject, f)
+        pickle.dump(subject_to_save, f)
 
-    prerun_subject_addr = f"{bug_folder}/run_subject_prerun.pkl"
+    prerun_subject_addr = os.path.join(bug_folder, "run_subject_prerun.pkl")
     with open(prerun_subject_addr, "wb") as f:
         pickle.dump(prerun_subject, f)
-    
+
     json_data = {
         "datetime": datetime.now().isoformat(),
         "bug_type": bug_type,
@@ -69,11 +57,14 @@ def save_bug_report(
         "base_styles": base_styles,
         "modified_styles": modified_styles,
         "variants": variants,
-        "minified_run_subject": minified_run_subject,
         "prerun_subject": prerun_subject,
         "pickle_addr": pickle_addr,
-        "shouldSkip": shouldSkip
+        "used_minified_run_subject": minified_run_subject is not None,
     }
+
+    if minified_run_subject is not None:
+        json_data["minified_run_subject"] = minified_run_subject
+
     if isinstance(run_result, RunResultLayoutBug):
         json_data["differences"] = run_result.element_dimensions
 
@@ -81,8 +72,10 @@ def save_bug_report(
     with open(json_data_filepath, "w") as f:
         f.write(json.dumps(json_data, indent=4, default=lambda o: o.__dict__))
 
-    # Todo: Copy the necessary javascript files (debugger_tools.js)
-
-    # Return a URL
     url = "file://" + os.path.abspath(minified_bug)
-    return url
+    return {
+        "url": url,
+        "bug_folder": os.path.abspath(bug_folder),
+        "pickle_addr": os.path.abspath(pickle_addr),
+        "json_data_path": os.path.abspath(json_data_filepath),
+    }

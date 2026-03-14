@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
 
-import sys, traceback, argparse
+import argparse
+import os
+import pickle
+import re
+import sys
+import time
+import traceback
+
+from bs4 import BeautifulSoup
+
+from tooling.bug_group import process_bug
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
+from lqc.generate.web_page.create import save_as_web_page
 from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
-from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc.util.counter import Counter
-from lqc.generate.web_page.create import save_as_web_page
-
+from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from lqc_selenium.selenium_harness.layout_tester import test_combination
-import pickle
-import inspect, lqc.model.run_subject as rsmod
-import os, uuid, pickle, re
-from bs4 import BeautifulSoup
-import time
-from tooling.ruleConvergence import should_skip
-
 
 
 def _ensure_dir(d):
@@ -104,18 +105,6 @@ def node_matches(node, spec):
 
 def minify(target_browser, run_subject):
     prerun_subject = run_subject
-    conf = Config()
-    rules = conf.getRules()
-    print(f"Rules  {rules}...")
-
-    shouldSkip = should_skip(run_subject,rules)
-
-    #Skipes minimization if shouldSkip is True
-    """ 
-    if shouldSkip:
-        run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, pickle_subject, shouldSkip) """
-
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
@@ -135,78 +124,109 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,prerun_subject, shouldSkip)
+    return (run_subject, run_result, prerun_subject)
 
 
 
 def find_bugs(counter):
-
     target_browser = TargetBrowser()
+    safe_dir = "bug_reports/safe"
+    os.makedirs(safe_dir, exist_ok=True)
+
+    def safe_count():
+        return sum(
+            1 for name in os.listdir(safe_dir)
+            if name.endswith(".pkl")
+        )
+
+    while safe_count() < 50 and counter.should_continue():
+        run_subject = generate_run_subject()
+        run_result, test_filepath = test_combination(
+            target_browser.getDriver(),
+            run_subject,
+            keep_file=True
+        )
+
+        if not run_result.isBug():
+            print(f"Filling safe set: {safe_count() + 1}/50")
+            pickle_addr = os.path.join(safe_dir, f"safe_{int(time.time() * 1000)}.pkl")
+            with open(pickle_addr, "wb") as f:
+                pickle.dump(run_subject, f)
+
+        remove_file(test_filepath)
+        counter.incTests()
+        output = counter.getStatusString()
+        if output:
+            print(output)
 
     while counter.should_continue():
-
-        # Stage 1 - Generate & Test
         run_subject = generate_run_subject()
-        (run_result, test_filepath) = test_combination(target_browser.getDriver(), run_subject, keep_file=True)
-        
+        run_result, test_filepath = test_combination(
+            target_browser.getDriver(),
+            run_subject,
+            keep_file=True
+        )
+
         if not run_result.isBug():
             counter.incSuccess()
 
-            """             if counter.num_successful % 10 == 0:
-            os.makedirs("bug_reports/test-repo2/safe", exist_ok=True)
-            print("No bug found. Saving safe run_subject...")
-            pickle_addr = f"bug_reports/test-repo2/safe/safe_{int(time.time())}.pkl"
-            with open(pickle_addr, "wb") as f:
-                pickle.dump(run_subject, f) """
-
-
-
-
+            if safe_count() < 50:
+                print(f"No bug found. Saving safe run_subject... {safe_count() + 1}/50")
+                pickle_addr = os.path.join(safe_dir, f"safe_{int(time.time() * 1000)}.pkl")
+                with open(pickle_addr, "wb") as f:
+                    pickle.dump(run_subject, f)
         else:
-            # Stage 2 - Minifying Bug
-            if run_result.type == BugType.PAGE_CRASH:
-                print("Found a page that crashes. Minifying...")
-                
-            else:
-                print("Found bug. Minifying...")
+            print("Found bug. Checking known bug groups...")
+
             prerun_subject = run_subject
-            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, prerun_subject)
 
-            # False Positive Detection
-            if not minified_run_result.isBug():
-                print("False positive (could not reproduce)")
-                counter.incNoRepro()
-            elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
-                print("False positive (no modified styles)")
-                counter.incNoMod()
+            result = process_bug(
+                variants=None,
+                prerun_subject=prerun_subject,
+                run_result=run_result,
+                original_filepath=test_filepath,
+                minified_run_subject=None,
+                verbose=True,
+            )
 
+            if result["status"] == "needs-minification":
+                if run_result.type == BugType.PAGE_CRASH:
+                    print("Found a page that crashes. Minifying...")
+                else:
+                    print("Found bug. Minifying...")
+
+                minified_run_subject, minified_run_result, prerun_subject = minify(
+                    target_browser,
+                    prerun_subject
+                )
+
+                if not minified_run_result.isBug():
+                    print("False positive (could not reproduce)")
+                    counter.incNoRepro()
+                elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
+                    print("False positive (no modified styles)")
+                    counter.incNoMod()
+                else:
+                    print("Minified bug. Testing variants...")
+                    variants = test_variants(minified_run_subject)
+
+                    process_bug(
+                        variants=variants,
+                        prerun_subject=prerun_subject,
+                        run_result=minified_run_result,
+                        original_filepath=test_filepath,
+                        minified_run_subject=minified_run_subject,
+                        verbose=True,
+                    )
+                    counter.incError()
             else:
                 counter.incError()
-
-                # Stage 3 - Test Variants
-                print("Minified bug. Testing variants...")
-                variants = test_variants(minified_run_subject)
-                if shouldSkip:
-                    print(f"PATTERN FOUND: {shouldSkip}")
-                else:
-                    print("No pattern found.")
-                print("Variants tested. Saving bug report...")
-                url = save_bug_report(
-                    variants,
-                    minified_run_subject,
-                    minified_run_result,
-                    test_filepath,
-                    prerun_subject,
-                    shouldSkip
-                )
-                print(url)
 
         counter.incTests()
         output = counter.getStatusString()
         if output:
             print(output)
 
-        # Clean Up
         remove_file(test_filepath)
 
 
