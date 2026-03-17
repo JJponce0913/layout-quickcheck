@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
 
-import sys, traceback, argparse
+import argparse
+from contextlib import redirect_stdout
+import io
+import os
+import pickle
+import re
+import sys
+import traceback
+
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
+from lqc.generate.web_page.create import save_as_web_page
 from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
-from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc.util.counter import Counter
-from lqc.generate.web_page.create import save_as_web_page
-
+from lqc_selenium.report.bug_report_helper import save_bug_report
+from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from lqc_selenium.selenium_harness.layout_tester import test_combination
-import pickle
-import inspect, lqc.model.run_subject as rsmod
-import os, uuid, pickle, re
-from bs4 import BeautifulSoup
-
+from tooling.rule_engine import should_skip
 
 
 def _ensure_dir(d):
@@ -69,7 +72,7 @@ def minify_debug(target_browser, run_subject):
     print(f"STEP {idx:06d} FINAL")
     idx = _save_step_html(run_subject, folder, idx)
     print("Minifying done.")
-    return (run_subject, run_result, pickle_addre)
+    return (run_subject, run_result, pickle_addr)
 
 def visible_contents(parent):
     out = []
@@ -97,78 +100,21 @@ def node_matches(node, spec):
         return True
     return False
 
-def check_pattern(filename, pattern):
-    with open(filename, "r", encoding="utf-8") as f:
-        soup = BeautifulSoup(f, "html.parser")
-    bodies = soup.find_all("body")
-    for body in bodies:
-        contents = visible_contents(body)
-        n, m = len(contents), len(pattern)
-        if m == 0:
-            continue
-        for i in range(0, n - m + 1):
-            ok = True
-            for j in range(m):
-                if not node_matches(contents[i + j], pattern[j]):
-                    ok = False
-                    break
-            if ok:
-                return True
-    return False
-
-
-def check_style(html_path, prop, value):
-    with open(html_path, "r", encoding="utf-8") as f:
-        html = f.read()
-    scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, flags=re.I | re.S)
-    js = "\n".join(scripts)
-    m = re.search(r"function\s+makeStyleChanges\s*\(\s*\)\s*\{(.*?)\}", js, flags=re.S)
-    if not m:
-        return False
-    body = m.group(1)
-    prop_esc = re.escape(prop)
-    value_esc = re.escape(value)
-    bracket_pat = rf"\.style\[\s*['\"]{prop_esc}['\"]\s*\]\s*=\s*['\"]{value_esc}['\"]\s*;"
-    dot_pat = rf"\.style\.\s*{prop_esc}\s*=\s*['\"]{value_esc}['\"]\s*;"
-    return re.search(bracket_pat, body) is not None or re.search(dot_pat, body) is not None
-
-def should_skip(file):
-    conf = Config()
-    rules = conf.getRules()
-    print(f"Checking {len(rules)} skip rules...")
-
-    for rule in rules:
-        html_pat = rule.get("rule_class", {}).get("html_pattern", [])
-        styles = rule.get("rule_class", {}).get("style", [])
-
-        patternFound = check_pattern(file, html_pat)
-
-        styleFound = False
-        for prop, values in styles:
-            vals = values if isinstance(values, list) else [values]
-            for v in vals:
-                if check_style(file, prop, v):
-                    styleFound = True
-                    break
-            if styleFound:
-                break
-
-        if patternFound and styleFound:
-            return True
-
-    return False
 
 
 
 def minify(target_browser, run_subject):
-    pickle_subject= run_subject
-    save_as_web_page(run_subject, "tmp_generated_files/test_pre.html")
-    shouldSkip = should_skip("tmp_generated_files/test_pre.html")
+    prerun_subject = run_subject
+    conf = Config()
+    rules = conf.getRules()
 
-    
+    with redirect_stdout(io.StringIO()):
+        shouldSkip = should_skip(run_subject, rules)
+
+    #Skipe minimization if shouldSkip is True
     if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, pickle_subject, shouldSkip)
+        return (run_subject, run_result, prerun_subject, shouldSkip) 
 
     stepsFactory = MinifyStepFactory()
 
@@ -189,7 +135,7 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,pickle_subject, shouldSkip)
+    return (run_subject, run_result,prerun_subject, shouldSkip)
 
 
 
@@ -205,43 +151,35 @@ def find_bugs(counter):
         
         if not run_result.isBug():
             counter.incSuccess()
-
         else:
             # Stage 2 - Minifying Bug
-            if run_result.type == BugType.PAGE_CRASH:
-                print("Found a page that crashes. Minifying...")
-                
-            else:
-                print("Found bug. Minifying...")
-
-            (minified_run_subject, minified_run_result,pickle_subject, shouldSkip) = minify(target_browser, run_subject)
+            print("Bug found. Minifying...")
+            prerun_subject = run_subject
+            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, prerun_subject)
+            print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
 
             # False Positive Detection
             if not minified_run_result.isBug():
-                print("False positive (could not reproduce)")
+                print("Skipped: no repro after minify.")
                 counter.incNoRepro()
             elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
-                print("False positive (no modified styles)")
+                print("Skipped: no modified styles after minify.")
                 counter.incNoMod()
 
             else:
                 counter.incError()
 
                 # Stage 3 - Test Variants
-                print("Minified bug. Testing variants...")
                 variants = test_variants(minified_run_subject)
-                if shouldSkip:
-                    print(f"PATTERN FOUND: {shouldSkip}")
-                print("Variants tested. Saving bug report...")
                 url = save_bug_report(
                     variants,
                     minified_run_subject,
                     minified_run_result,
                     test_filepath,
-                    pickle_subject,
+                    prerun_subject,
                     shouldSkip
                 )
-                print(url)
+                print(f"Bug report saved: {url}")
 
         counter.incTests()
         output = counter.getStatusString()
