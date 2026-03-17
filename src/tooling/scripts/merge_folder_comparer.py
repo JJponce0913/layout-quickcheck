@@ -1,7 +1,20 @@
 import argparse
-import json
-from time import time
-from tree import create_rule, create_rule, extract_tag_tree, check_all_pkls,load_tree_start_pairs, merge_trees, get_styles
+import os
+import sys
+
+SRC_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
+from tooling.rule_engine import (
+    create_rule,
+    extract_tag_tree,
+    check_all_pkls,
+    get_base_styles,
+    get_modified_styles,
+    load_tree_start_pairs,
+    merge_trees,
+)
 
 """
 Incrementally merges tree structures from PKL files in a merge folder,
@@ -15,7 +28,7 @@ matches items in the check dataset.
 
 Usage
 -----
-python run_graph_pipeline.py --merge <merge_folder_path> --check <check_folder_path>
+python src/tooling/scripts/merge_folder_comparer.py --merge <merge_folder_path> --check <check_folder_path>
 
 Arguments
 ---------
@@ -49,7 +62,11 @@ def run_graph_pipeline(merge_folder, check_folder):
 
         treeLists.append(cur_tree)
 
-        rule = create_rule(extract_tag_tree(cur_tree), get_styles(cur_start))
+        rule = create_rule(
+            extract_tag_tree(cur_tree),
+            get_base_styles(cur_start),
+            get_modified_styles(cur_start),
+        )
         ruleLists.append(rule)
 
         results, true_count, false_count = check_all_pkls(check_folder, [rule])

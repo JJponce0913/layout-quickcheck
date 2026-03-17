@@ -1,7 +1,14 @@
 import argparse
 import json
-from tree import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles, merge_folder
-from treeComparison import walk_tree_verbose
+import os
+import sys
+
+SRC_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
+from tooling.rule_engine import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles, merge_folder
+from tooling.tree_merge import walk_tree_verbose
 
 """
 Merges tree structures from run_subject PKL files in a base folder,
@@ -10,7 +17,7 @@ against all PKL files in a check folder.
 
 Usage
 -----
-python run_pipeline.py --base <base_folder_path> --check <check_folder_path>
+python src/tooling/scripts/merge_folder.py --base <base_folder_path> --check <check_folder_path>
 
 Arguments
 ---------

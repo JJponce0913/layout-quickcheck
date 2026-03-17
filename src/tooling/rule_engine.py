@@ -2,11 +2,8 @@ import os
 import pickle
 import time
 import json
-import argparse
-from bs4 import BeautifulSoup
 
-from tooling.treeComparison import run_subject_to_node_tree, walk_tree_verbose, merge_trees
-from lqc.generate.web_page.create import save_as_web_page
+from tooling.tree_merge import run_subject_to_node_tree, merge_trees
 
 
 def load_tree_start_pairs(folder_path):
@@ -30,7 +27,6 @@ def load_tree_start_pairs(folder_path):
 
 def check_all_pkls(folder_path, rules):
     results = []
-    total = 0
     folder_name = os.path.basename(os.path.normpath(folder_path))
 
     for root, _, files in os.walk(folder_path):
@@ -38,7 +34,6 @@ def check_all_pkls(folder_path, rules):
             if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "run_subject.pkl" in name):
                 continue
 
-            total += 1
             pkl_path = os.path.join(root, name)
             try:
                 with open(pkl_path, "rb") as f:
@@ -88,50 +83,6 @@ def extract_tag_tree(node):
         return tag
 
     return [tag, out_children]
-
-
-def extract_tag_tree_with_ids(node):
-    if node is None:
-        return None
-
-    def _children(n):
-        kids = getattr(n, "children", None)
-        if kids is not None:
-            return kids
-        chain = []
-        child = getattr(n, "firstchild", None)
-        while child is not None:
-            chain.append(child)
-            child = getattr(child, "next", None)
-        return chain
-
-    def build(n):
-        tag = getattr(n, "tag", None)
-        if tag == "#text":
-            text_val = getattr(n, "text", "")
-            if isinstance(text_val, str) and not text_val.strip():
-                return None
-            return {"tag": "text"}
-
-        if not tag:
-            return None
-
-        entry = {"tag": tag}
-
-        node_id = getattr(n, "id", None)
-        if node_id and node_id != "none":
-            entry["id"] = node_id
-
-        kids = []
-        for c in _children(n):
-            child_entry = build(c)
-            if child_entry is not None:
-                kids.append(child_entry)
-
-        entry["children"] = kids
-        return entry
-
-    return build(node)
 
 
 def get_modified_styles(node):
@@ -188,35 +139,6 @@ def create_rule(html_pattern,base_style, modified_style):
             "html_pattern": html_pattern,
         },
     }
-
-
-def check_pattern(filename, pattern):
-    with open(filename, "r", encoding="utf-8") as f:
-        soup = BeautifulSoup(f, "html.parser")
-
-    need = {}
-    for x in pattern:
-        need[x] = need.get(x, 0) + 1
-
-    for body in soup.find_all("body"):
-        kids = [c for c in body.contents if getattr(c, "name", None) or str(c).strip()]
-        have = {}
-        for c in kids:
-            if getattr(c, "name", None):
-                k = c.name
-            else:
-                k = "text"
-            have[k] = have.get(k, 0) + 1
-
-        ok = True
-        for k, cnt in need.items():
-            if have.get(k, 0) < cnt:
-                ok = False
-                break
-        if ok:
-            return True
-
-    return False
 
 
 
@@ -623,7 +545,7 @@ def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
 
 
 def should_skip(run_subject, rules):
-    tree, start_node = run_subject_to_node_tree(run_subject)
+    tree, _ = run_subject_to_node_tree(run_subject)
     styles_list = get_all_styles(tree)
     patterns = all_ordered_patterns_unique(tree)
     mapping = ids_by_pattern(tree, patterns, include_text=True)

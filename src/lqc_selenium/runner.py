@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+from contextlib import redirect_stdout
+import io
 import os
 import pickle
 import re
@@ -18,7 +20,7 @@ from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from tree import should_skip
+from tooling.rule_engine import should_skip
 
 
 def _ensure_dir(d):
@@ -106,7 +108,8 @@ def minify(target_browser, run_subject):
     conf = Config()
     rules = conf.getRules()
 
-    shouldSkip = should_skip(run_subject,rules)
+    with redirect_stdout(io.StringIO()):
+        shouldSkip = should_skip(run_subject, rules)
 
     #Skipe minimization if shouldSkip is True
     if shouldSkip:
@@ -150,33 +153,24 @@ def find_bugs(counter):
             counter.incSuccess()
         else:
             # Stage 2 - Minifying Bug
-            if run_result.type == BugType.PAGE_CRASH:
-                print("Found a page that crashes. Minifying...")
-                
-            else:
-                print("Found bug. Minifying...")
+            print("Bug found. Minifying...")
             prerun_subject = run_subject
             (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, prerun_subject)
+            print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
 
             # False Positive Detection
             if not minified_run_result.isBug():
-                print("False positive (could not reproduce)")
+                print("Skipped: no repro after minify.")
                 counter.incNoRepro()
             elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
-                print("False positive (no modified styles)")
+                print("Skipped: no modified styles after minify.")
                 counter.incNoMod()
 
             else:
                 counter.incError()
 
                 # Stage 3 - Test Variants
-                print("Minified bug. Testing variants...")
                 variants = test_variants(minified_run_subject)
-                if shouldSkip:
-                    print(f"PATTERN FOUND: {shouldSkip}")
-                else:
-                    print("No pattern found.")
-                print("Variants tested. Saving bug report...")
                 url = save_bug_report(
                     variants,
                     minified_run_subject,
@@ -185,7 +179,7 @@ def find_bugs(counter):
                     prerun_subject,
                     shouldSkip
                 )
-                print(url)
+                print(f"Bug report saved: {url}")
 
         counter.incTests()
         output = counter.getStatusString()

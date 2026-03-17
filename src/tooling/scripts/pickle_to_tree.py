@@ -1,7 +1,7 @@
 
 import argparse
 import pickle
-from tooling.treeComparison import pickle_to_node_tree, walk_tree_verbose
+from tooling.tree_merge import pickle_to_node_tree, walk_tree_verbose
 from lqc.generate.web_page.create import save_as_web_page
 
 """
@@ -10,7 +10,7 @@ structure, and generates an HTML visualization.
 
 Usage
 -----
-python run_subject_to_html.py --pickle path/to/run_subject.pkl --output output.html
+python src/tooling/scripts/pickle_to_tree.py --pickle path/to/run_subject.pkl --output output.html
 
 Arguments
 ---------

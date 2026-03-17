@@ -1,7 +1,13 @@
 import argparse
 import os
 import pickle
+import sys
 import uuid
+
+SRC_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.web_page.create import save_as_web_page
@@ -25,7 +31,7 @@ still reproducible, tests variants and saves a bug report.
 
 Usage
 -----
-python minify_test.py --pickle path/to/run_subject.pkl --config ./config/change.json
+python src/tooling/scripts/run_minify.py --pickle path/to/run_subject.pkl --config ./config/change.json
 
 Arguments
 ---------

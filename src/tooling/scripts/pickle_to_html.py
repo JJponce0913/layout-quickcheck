@@ -11,17 +11,20 @@ representation.
 
 Usage
 -----
-python src/tooling/pickle_to_html.py path/to/run_subject.pkl
+python src/tooling/scripts/pickle_to_html.py --pickle path/to/run_subject.pkl --output path/to/output.html
 
 Arguments
 ---------
-pickle_path
+--pickle
     Path to the pickle file containing the run_subject object.
+
+--output
+    Path to the output HTML file. Defaults to test.html.
 
 Output
 ------
-Generates an HTML file named test.html in the current working directory
-containing a rendered visualization of the run_subject object.
+Generates an HTML file containing a rendered visualization of the
+run_subject object.
 """
 
 

@@ -24,9 +24,6 @@ class Node:
         f"children={len(self.children)}, "
         f"base_style={self.base_style}, modified_style={self.modified_style})")
 
-    def get_parent(self):
-        return self.parent
-
 class TextNode:
     def __init__(self, text, parent=None):
         self.tag = "#text"
@@ -35,9 +32,6 @@ class TextNode:
 
     def __str__(self):
         return f"TextNode(text={self.text})"
-
-    def get_parent(self):
-        return self.parent
 
 def _merge_dicts(d1, d2):
     keys = set(d1.keys()) & set(d2.keys())
@@ -290,38 +284,6 @@ def build_right(a, b, merged_parent, a_index=None, b_index=None):
         i1 += 1
         i2 += 1
     return out
-
-def build_up(a, b):
-    merged_subtree = build_down(a, b, parent=None)
-    if merged_subtree is None:
-        return None
-
-    cur_a = a
-    cur_b = b
-    cur_merged = merged_subtree
-
-    while cur_a is not None and cur_b is not None and cur_a.parent is not None and cur_b.parent is not None:
-        pa = cur_a.parent
-        pb = cur_b.parent
-
-        i1 = _sibling_index(cur_a)
-        i2 = _sibling_index(cur_b)
-        if i1 is None or i2 is None:
-            break
-
-        merged_parent = merge_nodes(pa, pb, parent=None)
-        cur_merged.parent = merged_parent
-
-        left = build_left(cur_a, cur_b, merged_parent, a_index=i1, b_index=i2)
-        right = build_right(cur_a, cur_b, merged_parent, a_index=i1, b_index=i2)
-
-        merged_parent.children = left + [cur_merged] + right
-
-        cur_merged = merged_parent
-        cur_a = pa
-        cur_b = pb
-
-    return cur_merged
 
 def merge_trees(a, b):
     start_node = build_down(a, b, parent=None)
