@@ -192,6 +192,7 @@ def find_bugs(counter):
 
 DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
 
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""find bugs in browser layout calculation - run forever unless specified otherwise\n\nexamples: \n    compare.py -b 1         # Find one bug and quit \n    compare.py -t 2000      # Run 2000 tests and quit""")
