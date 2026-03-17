@@ -1,3 +1,35 @@
+"""
+Sort bug pickles into known and unknown groups using tree-based rule synthesis.
+
+For each input pickle, this script builds a DOM/style tree and tries to:
+1) add it to an existing known-bug group if a merged rule stays precise, or
+2) promote an unknown instance into a new known group when it remains safe-clean, or
+3) keep it in unknown-bugs when no safe rule can be formed.
+
+Rules are validated against a separate safe dataset to avoid overmatching.
+
+Usage
+-----
+python src/tooling/scripts/sort_bug.py --pickles-dir <dir> --pickle-name <name> --safe-dir <dir> --output-dir <name_or_path>
+
+Arguments
+---------
+--pickles-dir
+    Root directory scanned recursively for input pickles.
+--pickle-name
+    Exact filename to process (for example, run_subject.pkl).
+--safe-dir
+    Directory of safe pickles used to reject overbroad rules.
+--output-dir
+    Output directory name (under bug_reports/) or absolute output path.
+
+Output
+------
+Creates/overwrites the output directory and writes:
+- known-bugs/ groups with merged tree artifacts and saved instances
+- unknown-bugs/ instances that could not be safely promoted
+"""
+
 import argparse
 from contextlib import redirect_stdout
 import datetime
