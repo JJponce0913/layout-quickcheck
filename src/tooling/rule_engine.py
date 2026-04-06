@@ -785,16 +785,12 @@ def sort_single_bug(base_dir, run_subject, safe_dir, verbose=False):
         log(f"[sort_single_bug] single_bug_counts true_safe={true_safe}")
 
         if true_safe <10:
+            # Do not create a new group unless the final merged artifacts are valid.
             new_folder_name = f"bug-group-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
             new_group_path = os.path.join(base_dir, new_folder_name)
             os.makedirs(new_group_path, exist_ok=True)
             promoted_bug_path = os.path.join(new_group_path, os.path.basename(bugInstancePath))
             shutil.move(bugInstancePath, promoted_bug_path)
-            log(f"[sort_single_bug] promote_to_new_group={new_group_path}")
-            log(f"[sort_single_bug] moved_existing_bug_into_group={promoted_bug_path}")
-            if verbose:
-                print(f"[sort_single_bug] new_group_rule:")
-                pprint.pprint(rule)
             return new_group_path, False, None
 
     # If no safe grouping is possible, keep the bug as a standalone instance.
