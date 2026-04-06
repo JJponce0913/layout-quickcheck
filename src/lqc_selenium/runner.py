@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
+import ast
 from contextlib import redirect_stdout
 import io
+import json
 import os
 import pickle
 import re
 import sys
+from time import time
 import traceback
 
 from lqc.config.config import Config, parse_config
@@ -16,11 +19,11 @@ from lqc.generate.web_page.create import save_as_web_page
 from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
 from lqc.util.counter import Counter
-from lqc_selenium.report.bug_report_helper import save_bug_report
+from lqc_selenium.report.bug_report_helper import save_bug_report, save_bug_report_custom
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from tooling.rule_engine import should_skip
+from tooling.rule_engine import should_skip, sort_single_bug
 
 
 def _ensure_dir(d):
@@ -101,20 +104,112 @@ def node_matches(node, spec):
     return False
 
 
+def _extract_generated_rules_from_text(content):
+    rules = []
+    marker = "Generated Rule:"
+    start = 0
+
+    while True:
+        marker_idx = content.find(marker, start)
+        if marker_idx == -1:
+            break
+
+        tail = content[marker_idx + len(marker):].lstrip()
+        if not tail.startswith("{"):
+            start = marker_idx + len(marker)
+            continue
+
+        depth = 0
+        end_idx = None
+        for i, ch in enumerate(tail):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    end_idx = i + 1
+                    break
+
+        if end_idx is None:
+            start = marker_idx + len(marker)
+            continue
+
+        try:
+            parsed = ast.literal_eval(tail[:end_idx])
+            if isinstance(parsed, dict):
+                rules.append(parsed)
+        except (SyntaxError, ValueError):
+            pass
+
+        start = marker_idx + len(marker)
+
+    return rules
+
+
+def extract_bug_group_rules_to_json(
+    source_root="bug_reports/sort-repo",
+    output_json_path="bug_reports/sort-repo/rules.json",
+):
+    all_rules = []
+
+    if not os.path.isdir(source_root):
+        os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
+        with open(output_json_path, "w", encoding="utf-8") as f:
+            json.dump({"rules": []}, f, indent=2)
+        return output_json_path, all_rules
+
+    for root, _, files in os.walk(source_root):
+        if "merged_tree.txt" not in files:
+            continue
+
+        group_name = os.path.basename(root)
+        if not group_name.startswith("bug-group-"):
+            continue
+
+        merged_tree_path = os.path.join(root, "merged_tree.txt")
+        try:
+            with open(merged_tree_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+
+        extracted = _extract_generated_rules_from_text(content)
+        for rule in extracted:
+            all_rules.append(
+                {
+                    "bug_group": os.path.relpath(root, source_root),
+                    "merged_tree_path": merged_tree_path.replace("\\", "/"),
+                    "rule": rule,
+                }
+            )
+
+    os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
+    with open(output_json_path, "w", encoding="utf-8") as f:
+        json.dump({"rules": all_rules}, f, indent=2)
+
+    return output_json_path, [entry["rule"] for entry in all_rules]
+
+
 
 
 def minify(target_browser, run_subject):
     prerun_subject = run_subject
     conf = Config()
-    rules = conf.getRules()
-
+    print(conf.getRules(),"\n")
+    _, rules = extract_bug_group_rules_to_json(
+        source_root="bug_reports/sort-repo",
+        output_json_path="bug_reports/sort-repo/rules.json",
+    )
+    if not rules:
+        rules = conf.getRules()
+    print(rules,"\n")
     with redirect_stdout(io.StringIO()):
-        shouldSkip = should_skip(run_subject, rules)
+        shouldSkip, rule_name = should_skip(run_subject, rules)
 
     #Skipe minimization if shouldSkip is True
     if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, prerun_subject, shouldSkip) 
+        return (run_subject, run_result, prerun_subject, shouldSkip, rule_name) 
 
     stepsFactory = MinifyStepFactory()
 
@@ -135,12 +230,41 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,prerun_subject, shouldSkip)
+    return (run_subject, run_result,prerun_subject, shouldSkip, rule_name)
 
 
 
 def find_bugs(counter):
+    target_browser = TargetBrowser()
+    safe_dir = "bug_reports/safe"
+    os.makedirs(safe_dir, exist_ok=True)
 
+    def safe_count():
+        return sum(
+            1 for name in os.listdir(safe_dir)
+            if name.endswith(".pkl")
+        )
+
+    while safe_count() < 50 and counter.should_continue():
+        run_subject = generate_run_subject()
+        run_result, test_filepath = test_combination(
+            target_browser.getDriver(),
+            run_subject,
+            keep_file=True
+        )
+
+        if not run_result.isBug():
+            print(f"Filling safe set: {safe_count() + 1}/50")
+            pickle_addr = os.path.join(safe_dir, f"safe_{int(time() * 1000)}.pkl")
+            with open(pickle_addr, "wb") as f:
+                pickle.dump(run_subject, f)
+
+        remove_file(test_filepath)
+        counter.incTests()
+        output = counter.getStatusString()
+        if output:
+            print(output)
+            
     target_browser = TargetBrowser()
 
     while counter.should_continue():
@@ -155,8 +279,20 @@ def find_bugs(counter):
             # Stage 2 - Minifying Bug
             print("Bug found. Minifying...")
             prerun_subject = run_subject
-            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, prerun_subject)
+            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip, rule_name) = minify(target_browser, prerun_subject)
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
+            print(f"Rule name: {rule_name}")
+            if shouldSkip:
+                save_bug_report_custom(
+                    variants=[],
+                    minified_run_subject=None,
+                    run_result=minified_run_result,
+                    original_filepath=test_filepath,
+                    prerun_subject=prerun_subject,
+                    shouldSkip=shouldSkip,
+                    folder_name="sort-repo",
+                    rule_name=rule_name
+                )
 
             # False Positive Detection
             if not minified_run_result.isBug():
@@ -171,13 +307,16 @@ def find_bugs(counter):
 
                 # Stage 3 - Test Variants
                 variants = test_variants(minified_run_subject)
-                url = save_bug_report(
+                
+                url = save_bug_report_custom(
                     variants,
                     minified_run_subject,
                     minified_run_result,
                     test_filepath,
                     prerun_subject,
-                    shouldSkip
+                    folder_name="sort-repo",
+                    shouldSkip=shouldSkip,
+                    rule_name=rule_name,
                 )
                 print(f"Bug report saved: {url}")
 
@@ -190,7 +329,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+DEFAULT_CONFIG_FILE = "./config/change.json"
 
 
 if __name__ == "__main__":

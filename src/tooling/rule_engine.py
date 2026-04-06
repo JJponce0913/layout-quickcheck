@@ -1,5 +1,7 @@
+import datetime
 import os
 import pickle
+import random
 import time
 import json
 
@@ -565,8 +567,69 @@ def should_skip(run_subject, rules):
 
         if html_match:
             print("Rule matched, should skip.")
-            return True
+            return True, rule.get("name", "unknown")
 
-    return False
+    return False, None
 
     
+def sort_single_bug(base_dir, pickle_path, safe_dir):
+    with open(pickle_path, "rb") as f:
+        run_subject = pickle.load(f)
+
+    tree, startnode = run_subject_to_node_tree(run_subject)
+
+    known_dir = os.path.join(base_dir, "known-bugs")
+    unknown_dir = os.path.join(base_dir, "unknown-bugs")
+
+    for bugFolder in os.listdir(known_dir):
+        bugGroupPath = os.path.join(known_dir, bugFolder)
+        merged_path = os.path.join(bugGroupPath, "merged_tree.pkl")
+
+        if not os.path.exists(merged_path):
+            continue
+
+        with open(merged_path, "rb") as f:
+            _, merged_start = pickle.load(f)
+
+        temp_tree, temp_start = merge_trees(startnode, merged_start)
+
+        rule = create_rule(
+            extract_tag_tree(temp_tree),
+            get_base_styles(temp_start),
+            get_modified_styles(temp_start),
+        )
+
+        _, _, false_bug = check_all_pkls(bugGroupPath, [rule])
+        _, true_safe, _ = check_all_pkls(safe_dir, [rule])
+
+        if false_bug == 0 and true_safe == 0:
+            return bugGroupPath
+
+    for bugFolder in os.listdir(unknown_dir):
+        bugInstancePath = os.path.join(unknown_dir, bugFolder)
+        tree_path = os.path.join(bugInstancePath, "tree.pkl")
+
+        if not os.path.exists(tree_path):
+            continue
+
+        with open(tree_path, "rb") as f:
+            _, unknown_start = pickle.load(f)
+
+        temp_tree, temp_start = merge_trees(startnode, unknown_start)
+
+        rule = create_rule(
+            extract_tag_tree(temp_tree),
+            get_base_styles(temp_start),
+            get_modified_styles(temp_start),
+        )
+
+        _, true_safe, _ = check_all_pkls(safe_dir, [rule])
+
+        if true_safe == 0:
+            new_folder_name = f"bug-group-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
+            return os.path.join(known_dir, new_folder_name)
+
+    new_unknown = f"bug-instance-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
+    return os.path.join(unknown_dir, new_unknown)
+
+
