@@ -37,7 +37,7 @@ class FileConfig:
         custom_dir = os.path.join(self.bug_report_file_dir, custom_folder)
         if not os.path.exists(custom_dir):
             os.makedirs(custom_dir)
-        bug_folder = os.path.join(custom_dir, f"{custom_folder}-{formatted_timestamp}")
+        bug_folder = os.path.join(custom_dir, f"bug-{formatted_timestamp}")
         return bug_folder
     
     def getTimestampBugReport(self):

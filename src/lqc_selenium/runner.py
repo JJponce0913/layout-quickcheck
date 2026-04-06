@@ -3,6 +3,7 @@
 import argparse
 import ast
 from contextlib import redirect_stdout
+from datetime import datetime
 import io
 import json
 import os
@@ -24,6 +25,55 @@ from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from tooling.rule_engine import should_skip, sort_single_bug
+
+VERBOSE = False
+RUN_SUMMARY_ROOT = "bug_reports/tester/sort-repo"
+
+
+def write_run_summary(counter, target_root=RUN_SUMMARY_ROOT):
+    os.makedirs(target_root, exist_ok=True)
+
+    group_dirs = []
+    single_bug_dirs = []
+    grouped_bug_instances = 0
+
+    for entry in os.listdir(target_root):
+        entry_path = os.path.join(target_root, entry)
+        if not os.path.isdir(entry_path):
+            continue
+
+        if entry.startswith("bug-group-"):
+            group_dirs.append(entry)
+            grouped_bug_instances += sum(
+                1
+                for child in os.listdir(entry_path)
+                if os.path.isdir(os.path.join(entry_path, child)) and child.startswith("bug-")
+            )
+        elif entry.startswith("bug-"):
+            single_bug_dirs.append(entry)
+
+    summary = {
+        "updated_at": datetime.now().isoformat(),
+        "target_root": os.path.abspath(target_root),
+        "tests_run": counter.num_tests,
+        "passed": counter.num_successful,
+        "bugs_found": counter.num_error,
+        "cant_reproduce": counter.num_cant_reproduce,
+        "bugs_with_no_modified_styles": counter.num_no_mod_styles_bugs,
+        "crashes": counter.num_crash,
+        "bug_group_count": len(group_dirs),
+        "single_bug_count": len(single_bug_dirs),
+        "grouped_bug_instance_count": grouped_bug_instances,
+        "total_bug_directories": len(single_bug_dirs) + grouped_bug_instances,
+        "bug_groups": sorted(group_dirs),
+        "single_bugs": sorted(single_bug_dirs),
+    }
+
+    summary_path = os.path.join(target_root, "run_summary.json")
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    return summary_path
 
 
 def _ensure_dir(d):
@@ -150,43 +200,48 @@ def extract_bug_group_rules_to_json(
     source_root="bug_reports/sort-repo",
     output_json_path="bug_reports/sort-repo/rules.json",
 ):
+    print(f"Extracting rules from {source_root} to {output_json_path}...")
     all_rules = []
+    bug_group_folder_count = 0
 
     if not os.path.isdir(source_root):
         os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
         with open(output_json_path, "w", encoding="utf-8") as f:
             json.dump({"rules": []}, f, indent=2)
+        print("Found 0 bug-group folders.")
         return output_json_path, all_rules
 
     for root, _, files in os.walk(source_root):
-        if "merged_tree.txt" not in files:
-            continue
-
         group_name = os.path.basename(root)
         if not group_name.startswith("bug-group-"):
             continue
+        bug_group_folder_count += 1
 
-        merged_tree_path = os.path.join(root, "merged_tree.txt")
-        try:
-            with open(merged_tree_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        except OSError:
+        if "extracted_rule.json" not in files:
             continue
 
-        extracted = _extract_generated_rules_from_text(content)
-        for rule in extracted:
-            all_rules.append(
-                {
-                    "bug_group": os.path.relpath(root, source_root),
-                    "merged_tree_path": merged_tree_path.replace("\\", "/"),
-                    "rule": rule,
-                }
-            )
+        extracted_rule_path = os.path.join(root, "extracted_rule.json")
+        try:
+            with open(extracted_rule_path, "r", encoding="utf-8") as f:
+                rule = json.load(f)
+        except OSError:
+            continue
+        except json.JSONDecodeError:
+            continue
+
+        all_rules.append(
+            {
+                "bug_group": os.path.relpath(root, source_root),
+                "merged_tree_path": extracted_rule_path.replace("\\", "/"),
+                "rule": rule,
+            }
+        )
 
     os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
     with open(output_json_path, "w", encoding="utf-8") as f:
         json.dump({"rules": all_rules}, f, indent=2)
 
+    print(f"Found {bug_group_folder_count} bug-group folders.")
     return output_json_path, [entry["rule"] for entry in all_rules]
 
 
@@ -194,22 +249,18 @@ def extract_bug_group_rules_to_json(
 
 def minify(target_browser, run_subject):
     prerun_subject = run_subject
-    conf = Config()
-    print(conf.getRules(),"\n")
-    _, rules = extract_bug_group_rules_to_json(
-        source_root="bug_reports/sort-repo",
-        output_json_path="bug_reports/sort-repo/rules.json",
+    path,shouldSkip,rule_name = sort_single_bug(
+        base_dir="bug_reports/tester/sort-repo",
+        run_subject=run_subject,
+        safe_dir="bug_reports/safe",
+        verbose=VERBOSE,
     )
-    if not rules:
-        rules = conf.getRules()
-    print(rules,"\n")
-    with redirect_stdout(io.StringIO()):
-        shouldSkip, rule_name = should_skip(run_subject, rules)
-
+    print(f"Matching rule folder: {path}")
+    
     #Skipe minimization if shouldSkip is True
-    if shouldSkip:
+    """ if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, prerun_subject, shouldSkip, rule_name) 
+        return (run_subject, run_result, prerun_subject, path,shouldSkip, rule_name)  """
 
     stepsFactory = MinifyStepFactory()
 
@@ -230,7 +281,7 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,prerun_subject, shouldSkip, rule_name)
+    return (run_subject, run_result,prerun_subject, path,shouldSkip, rule_name)
 
 
 
@@ -238,6 +289,7 @@ def find_bugs(counter):
     target_browser = TargetBrowser()
     safe_dir = "bug_reports/safe"
     os.makedirs(safe_dir, exist_ok=True)
+    write_run_summary(counter)
 
     def safe_count():
         return sum(
@@ -261,6 +313,7 @@ def find_bugs(counter):
 
         remove_file(test_filepath)
         counter.incTests()
+        write_run_summary(counter)
         output = counter.getStatusString()
         if output:
             print(output)
@@ -279,9 +332,10 @@ def find_bugs(counter):
             # Stage 2 - Minifying Bug
             print("Bug found. Minifying...")
             prerun_subject = run_subject
-            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip, rule_name) = minify(target_browser, prerun_subject)
+            (minified_run_subject, minified_run_result, prerun_subject,path, shouldSkip, rule_name) = minify(target_browser, prerun_subject)
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
             print(f"Rule name: {rule_name}")
+            # Save bug report that matches a rule 
             if shouldSkip:
                 save_bug_report_custom(
                     variants=[],
@@ -289,8 +343,8 @@ def find_bugs(counter):
                     run_result=minified_run_result,
                     original_filepath=test_filepath,
                     prerun_subject=prerun_subject,
+                    path=path,
                     shouldSkip=shouldSkip,
-                    folder_name="sort-repo",
                     rule_name=rule_name
                 )
 
@@ -314,13 +368,14 @@ def find_bugs(counter):
                     minified_run_result,
                     test_filepath,
                     prerun_subject,
-                    folder_name="sort-repo",
+                    path=path,
                     shouldSkip=shouldSkip,
                     rule_name=rule_name,
                 )
                 print(f"Bug report saved: {url}")
 
         counter.incTests()
+        write_run_summary(counter)
         output = counter.getStatusString()
         if output:
             print(output)
@@ -346,6 +401,7 @@ if __name__ == "__main__":
     print(f"Using config file {args.config_file}")
     conf = parse_config(args.config_file)
     Config(conf)
+    VERBOSE = args.verbose > 0
 
     # Logging - Target Variant
     target_variant = getTargetVariant()
@@ -364,6 +420,9 @@ if __name__ == "__main__":
                 "traceback": exc_traceback,
             }
             counter.incCrash(exc=exc)
+            write_run_summary(counter)
+
+    write_run_summary(counter)
 
     if counter.num_crash > 0:
         print(f"Number of crashes: {counter.num_crash}\nCrash Errors:\n")

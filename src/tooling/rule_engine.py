@@ -1,11 +1,16 @@
 import datetime
+import html
+import io
 import os
 import pickle
+import pprint
 import random
+import shutil
 import time
 import json
+from contextlib import redirect_stdout
 
-from tooling.tree_merge import run_subject_to_node_tree, merge_trees
+from tooling.tree_merge import run_subject_to_node_tree, merge_trees, walk_tree_verbose
 
 
 def load_tree_start_pairs(folder_path):
@@ -27,7 +32,7 @@ def load_tree_start_pairs(folder_path):
     return pairs
 
 
-def check_all_pkls(folder_path, rules):
+def check_all_pkls(folder_path, rules, verbose=False):
     results = []
     folder_name = os.path.basename(os.path.normpath(folder_path))
 
@@ -41,18 +46,21 @@ def check_all_pkls(folder_path, rules):
                 with open(pkl_path, "rb") as f:
                     run_subject = pickle.load(f)
 
-                matched = should_skip(run_subject, rules)
-                print(f"[{folder_name}] {name}: {matched}")
+                matched = should_skip(run_subject, rules, verbose=verbose)
+                if verbose:
+                    print(f"[{folder_name}] {name}: {matched}")
                 results.append((pkl_path, matched))
 
             except Exception as e:
-                print(f"[{folder_name}] {name}: ERROR {e}")
+                if verbose:
+                    print(f"[{folder_name}] {name}: ERROR {e}")
                 results.append((pkl_path, f"ERROR: {e}"))
 
     true_count = 0
     false_count = 0
     for _, r in results:
-        if r is True:
+        matched = r[0] if isinstance(r, tuple) else r
+        if matched is True:
             true_count += 1
         else:
             false_count += 1
@@ -160,6 +168,84 @@ def merge_folder(folder_path):
         cur_tree, cur_start = merge_trees(cur_start, start_node)
 
     return cur_tree, cur_start
+
+
+def _render_tree_html(tree_root):
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        walk_tree_verbose(tree_root)
+    tree_text = html.escape(buffer.getvalue())
+    return f"""<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Bug Group Tree</title>
+  </head>
+  <body>
+    <pre>{tree_text}</pre>
+  </body>
+</html>
+"""
+
+
+def recompute_bug_group_artifacts(group_dir):
+    bug_instances = []
+    for name in os.listdir(group_dir):
+        if not name.startswith("bug-") or name.startswith("bug-group-"):
+            continue
+
+        bug_dir = os.path.join(group_dir, name)
+        if not os.path.isdir(bug_dir):
+            continue
+
+        pickle_path = os.path.join(bug_dir, "minified_run_subject.pkl")
+        if not os.path.exists(pickle_path):
+            continue
+
+        with open(pickle_path, "rb") as f:
+            run_subject = pickle.load(f)
+
+        tree, start_node = run_subject_to_node_tree(run_subject)
+        if start_node is None:
+            continue
+
+        bug_instances.append((tree, start_node))
+
+    if not bug_instances:
+        return None
+
+    merged_tree, merged_start = bug_instances[0]
+    for next_tree, next_start in bug_instances[1:]:
+        merged_tree, merged_start = merge_trees(merged_start, next_start)
+
+    rule = create_rule(
+        extract_tag_tree(merged_tree),
+        get_base_styles(merged_start),
+        get_modified_styles(merged_start),
+    )
+
+    if rule.get("rule_class", {}).get("modified_style") == []:
+        tree_pickle_path = os.path.join(group_dir, "tree.pkl")
+        tree_html_path = os.path.join(group_dir, "tree.html")
+        extracted_rule_path = os.path.join(group_dir, "extracted_rule.json")
+        for artifact_path in (tree_pickle_path, tree_html_path, extracted_rule_path):
+            if os.path.exists(artifact_path):
+                os.remove(artifact_path)
+        return None
+
+    tree_pickle_path = os.path.join(group_dir, "tree.pkl")
+    with open(tree_pickle_path, "wb") as f:
+        pickle.dump((merged_tree, merged_start), f)
+
+    tree_html_path = os.path.join(group_dir, "tree.html")
+    with open(tree_html_path, "w", encoding="utf-8") as f:
+        f.write(_render_tree_html(merged_tree))
+
+    extracted_rule_path = os.path.join(group_dir, "extracted_rule.json")
+    with open(extracted_rule_path, "w", encoding="utf-8") as f:
+        json.dump(rule, f, indent=2)
+
+    return rule
 
 
 def node_to_ordered_tokens(root, include_text=True):
@@ -546,7 +632,7 @@ def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
 
 
 
-def should_skip(run_subject, rules):
+def should_skip(run_subject, rules, verbose=False):
     tree, _ = run_subject_to_node_tree(run_subject)
     styles_list = get_all_styles(tree)
     patterns = all_ordered_patterns_unique(tree)
@@ -558,34 +644,73 @@ def should_skip(run_subject, rules):
         modified_styles = rule.get("rule_class", {}).get("modified_style", [])
 
         style_ids = id_with_styles(styles_list, base_styles, modified_styles)
-        print("Style check result ids")
-        print(style_ids)
+        if verbose:
+            print("Style check result ids")
+            print(style_ids)
 
         html_match = follow_html_and_style_pattern(style_ids, mapping, html_pat, tree)
-        print("HTML pattern check result")
-        print(html_match)
+        if verbose:
+            print("HTML pattern check result")
+            print(html_match)
 
         if html_match:
-            print("Rule matched, should skip.")
+            if verbose:
+                print("Rule matched, should skip.")
             return True, rule.get("name", "unknown")
 
     return False, None
 
     
-def sort_single_bug(base_dir, pickle_path, safe_dir):
-    with open(pickle_path, "rb") as f:
-        run_subject = pickle.load(f)
+def sort_single_bug(base_dir, run_subject, safe_dir, verbose=False):
+    """
+    Args:
+        base_dir: Root folder containing grouped bugs as `bug-group-*` folders
+            and ungrouped single bugs as `bug-*` folders.
+        run_subject: The bug instance being classified.
+        safe_dir: Folder of known-safe pickle files used to reject unsafe rules.
+
+    Returns:
+        A tuple of `(path, shouldSkip, rule_name)`.
+    """
+    def log(message=""):
+        if verbose:
+            print(message)
 
     tree, startnode = run_subject_to_node_tree(run_subject)
+    log("\n[sort_single_bug] start")
+    log(f"[sort_single_bug] base_dir={os.path.abspath(base_dir)}")
+    log(f"[sort_single_bug] safe_dir={os.path.abspath(safe_dir)}")
+    if verbose:
+        print("\n[sort_single_bug] incoming_run_subject_tree:")
+        pprint.pprint(extract_tag_tree(tree))
+        print("\n[sort_single_bug] incoming_run_subject_base_styles:")
+        pprint.pprint(get_base_styles(startnode))
+        print("\n[sort_single_bug] incoming_run_subject_modified_styles:")
+        pprint.pprint(get_modified_styles(startnode))
 
-    known_dir = os.path.join(base_dir, "known-bugs")
-    unknown_dir = os.path.join(base_dir, "unknown-bugs")
+    if startnode is None:
+        log("[sort_single_bug] incoming_run_subject_has_no_start_node")
+        new_unknown = f"bug-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
+        log(f"[sort_single_bug] creating_new_single_bug={os.path.join(base_dir, new_unknown)}")
+        return os.path.join(base_dir, new_unknown), False, None
 
-    for bugFolder in os.listdir(known_dir):
-        bugGroupPath = os.path.join(known_dir, bugFolder)
-        merged_path = os.path.join(bugGroupPath, "merged_tree.pkl")
+    os.makedirs(base_dir, exist_ok=True)
+
+    # First try to match the incoming bug against an existing grouped bug cluster.
+    for bugFolder in os.listdir(base_dir):
+        if not bugFolder.startswith("bug-group-"):
+            continue
+
+        bugGroupPath = os.path.join(base_dir, bugFolder)
+        if not os.path.isdir(bugGroupPath):
+            continue
+
+        log(f"\n[sort_single_bug] checking_known_group={bugGroupPath}")
+
+        merged_path = os.path.join(bugGroupPath, "tree.pkl")
 
         if not os.path.exists(merged_path):
+            log(f"[sort_single_bug] missing_merged_tree={merged_path}")
             continue
 
         with open(merged_path, "rb") as f:
@@ -598,22 +723,48 @@ def sort_single_bug(base_dir, pickle_path, safe_dir):
             get_base_styles(temp_start),
             get_modified_styles(temp_start),
         )
+        if rule.get("rule_class", {}).get("modified_style") == []:
+            log(f"[sort_single_bug] known_group_candidate_has_no_modified_styles, skipping={bugGroupPath}")
+            continue
+        if verbose:
+            print("[sort_single_bug] known_group_candidate_rule:")
+            pprint.pprint(rule)
 
-        _, _, false_bug = check_all_pkls(bugGroupPath, [rule])
-        _, true_safe, _ = check_all_pkls(safe_dir, [rule])
+        _, true_safe, _ = check_all_pkls(safe_dir, [rule], verbose=verbose)
+        log(f"[sort_single_bug] known_group_counts true_safe={true_safe}")
 
-        if false_bug == 0 and true_safe == 0:
-            return bugGroupPath
+        # Reuse the group only if the merged rule does not reject grouped bugs
+        # and does not match any known-safe cases.
+        if true_safe < 10:
+            log(f"[sort_single_bug] matched_existing_group={bugGroupPath}")
+            return bugGroupPath, True, rule.get("name", "unknown")
 
-    for bugFolder in os.listdir(unknown_dir):
-        bugInstancePath = os.path.join(unknown_dir, bugFolder)
-        tree_path = os.path.join(bugInstancePath, "tree.pkl")
+    # Next try to combine the bug with an ungrouped single-bug folder and
+    # promote that pair into a new bug group when the rule stays safe.
+    for bugFolder in os.listdir(base_dir):
+        if not bugFolder.startswith("bug-") or bugFolder.startswith("bug-group-"):
+            continue
+
+        bugInstancePath = os.path.join(base_dir, bugFolder)
+        if not os.path.isdir(bugInstancePath):
+            continue
+
+        log(f"\n[sort_single_bug] checking_single_bug={bugInstancePath}")
+
+        tree_path = os.path.join(bugInstancePath, "minified_run_subject.pkl")
 
         if not os.path.exists(tree_path):
+            log(f"[sort_single_bug] missing_tree={tree_path}")
             continue
 
         with open(tree_path, "rb") as f:
-            _, unknown_start = pickle.load(f)
+            existing_run_subject = pickle.load(f)
+        log(existing_run_subject)
+
+        _, unknown_start = run_subject_to_node_tree(existing_run_subject)
+        if unknown_start is None:
+            log(f"[sort_single_bug] existing_single_bug_has_no_start_node={bugInstancePath}")
+            continue
 
         temp_tree, temp_start = merge_trees(startnode, unknown_start)
 
@@ -622,14 +773,33 @@ def sort_single_bug(base_dir, pickle_path, safe_dir):
             get_base_styles(temp_start),
             get_modified_styles(temp_start),
         )
+        if rule.get("rule_class", {}).get("modified_style") == []:
+            log(f"[sort_single_bug] merged_rule_has_no_modified_styles, skipping={bugInstancePath}")
+            continue
+        
+        if verbose:
+            print("[sort_single_bug] promote_single_bug_candidate_rule:")
+            pprint.pprint(rule)
 
-        _, true_safe, _ = check_all_pkls(safe_dir, [rule])
+        _, true_safe, _ = check_all_pkls(safe_dir, [rule], verbose=verbose)
+        log(f"[sort_single_bug] single_bug_counts true_safe={true_safe}")
 
-        if true_safe == 0:
+        if true_safe <10:
             new_folder_name = f"bug-group-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
-            return os.path.join(known_dir, new_folder_name)
+            new_group_path = os.path.join(base_dir, new_folder_name)
+            os.makedirs(new_group_path, exist_ok=True)
+            promoted_bug_path = os.path.join(new_group_path, os.path.basename(bugInstancePath))
+            shutil.move(bugInstancePath, promoted_bug_path)
+            log(f"[sort_single_bug] promote_to_new_group={new_group_path}")
+            log(f"[sort_single_bug] moved_existing_bug_into_group={promoted_bug_path}")
+            if verbose:
+                print(f"[sort_single_bug] new_group_rule:")
+                pprint.pprint(rule)
+            return new_group_path, False, None
 
-    new_unknown = f"bug-instance-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
-    return os.path.join(unknown_dir, new_unknown)
+    # If no safe grouping is possible, keep the bug as a standalone instance.
+    new_unknown = f"bug-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
+    log(f"[sort_single_bug] creating_new_single_bug={os.path.join(base_dir, new_unknown)}")
+    return os.path.join(base_dir, new_unknown), False, None
 
 
