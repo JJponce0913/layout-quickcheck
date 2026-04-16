@@ -7,7 +7,7 @@ SRC_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from tooling.rule_engine import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles, merge_folder
+from lqc.rules.rule_engine import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles, merge_folder
 from tooling.tree_merge import walk_tree_verbose
 
 """

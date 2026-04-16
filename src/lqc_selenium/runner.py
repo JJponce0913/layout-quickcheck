@@ -68,7 +68,11 @@ def find_bugs(counter):
             counter.incSuccess()
         else:
             # Stage 2 - Minifying Bug
-            print("Bug found. Minifying...")
+            if run_result.type == BugType.PAGE_CRASH:
+                print("Found a page that crashes. Minifying...")
+            else:
+                print("Found bug. Minifying...")
+                
             (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, run_subject)
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
 
