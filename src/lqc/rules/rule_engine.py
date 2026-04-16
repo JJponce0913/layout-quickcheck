@@ -24,41 +24,6 @@ def load_tree_start_pairs(folder_path):
                 continue
     return pairs
 
-
-def check_all_pkls(folder_path, rules):
-    results = []
-    folder_name = os.path.basename(os.path.normpath(folder_path))
-
-    for root, _, files in os.walk(folder_path):
-        for name in files:
-            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "run_subject.pkl" in name):
-                continue
-
-            pkl_path = os.path.join(root, name)
-            try:
-                with open(pkl_path, "rb") as f:
-                    run_subject = pickle.load(f)
-
-                matched = should_skip(run_subject, rules)
-                print(f"[{folder_name}] {name}: {matched}")
-                results.append((pkl_path, matched))
-
-            except Exception as e:
-                print(f"[{folder_name}] {name}: ERROR {e}")
-                results.append((pkl_path, f"ERROR: {e}"))
-
-    true_count = 0
-    false_count = 0
-    for _, r in results:
-        if r is True:
-            true_count += 1
-        else:
-            false_count += 1
-
-    return results, true_count, false_count
-
-
-
 def extract_tag_tree(node):
     if node is None:
         return None
@@ -542,7 +507,37 @@ def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
             if ok:
                 yield ids
 
+def check_all_pkls(folder_path, rules):
+    results = []
+    folder_name = os.path.basename(os.path.normpath(folder_path))
 
+    for root, _, files in os.walk(folder_path):
+        for name in files:
+            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "run_subject.pkl" in name):
+                continue
+
+            pkl_path = os.path.join(root, name)
+            try:
+                with open(pkl_path, "rb") as f:
+                    run_subject = pickle.load(f)
+
+                matched = should_skip(run_subject, rules)
+                print(f"[{folder_name}] {name}: {matched}")
+                results.append((pkl_path, matched))
+
+            except Exception as e:
+                print(f"[{folder_name}] {name}: ERROR {e}")
+                results.append((pkl_path, f"ERROR: {e}"))
+
+    true_count = 0
+    false_count = 0
+    for _, r in results:
+        if r is True:
+            true_count += 1
+        else:
+            false_count += 1
+
+    return results, true_count, false_count
 
 def should_skip(run_subject, rules):
     tree, _ = run_subject_to_node_tree(run_subject)

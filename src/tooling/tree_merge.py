@@ -34,16 +34,19 @@ class TextNode:
         return f"TextNode(text={self.text})"
 
 def _merge_dicts(d1, d2):
-    keys = set(d1.keys()) & set(d2.keys())
+    keys = set(d1.keys()) | set(d2.keys())
     out = {}
+
     for k in keys:
+        if k not in d1 or k not in d2:
+            out[k] = "diff"
+            continue
+
         v1 = d1[k]
         v2 = d2[k]
 
         if isinstance(v1, dict) and isinstance(v2, dict):
-            merged = _merge_dicts(v1, v2)
-            if merged:
-                out[k] = merged
+            out[k] = _merge_dicts(v1, v2)
         elif v1 == v2:
             out[k] = v1
         else:
@@ -63,13 +66,13 @@ def merge_nodes(a, b, parent=None):
         return TextNode(text, parent=parent)
 
     if a_is_text or b_is_text:
-        return Node(tag="diff", id="empty", parent=parent, base_style={}, modified_style={})
+        return Node(tag="diff", id=None, parent=parent, base_style={}, modified_style={})
 
     tag = a.tag if a.tag == b.tag else "diff"
     node_id = a.id if a.id == b.id else "diff"
 
-    base_style = _merge_dicts(getattr(a, "base_style", {}) or {}, getattr(b, "base_style", {}) or {})
-    modified_style = _merge_dicts(getattr(a, "modified_style", {}) or {}, getattr(b, "modified_style", {}) or {})
+    base_style = _merge_dicts(a.base_style or {}, b.base_style or {})
+    modified_style = _merge_dicts(a.modified_style or {}, b.modified_style or {})
 
     return Node(
         tag=tag,
@@ -133,14 +136,14 @@ def run_subject_to_node_tree(run_subject):
         if node is None:
             return
 
-        if isinstance(node, TextNode) or node.tag == "#text":
+        if isinstance(node, TextNode):
             return
 
         new_children = []
         buffer = None
 
         for child in node.children:
-            if isinstance(child, TextNode) or child.tag == "#text":
+            if isinstance(child, TextNode):
                 if buffer is None:
                     buffer = TextNode(child.text, parent=node)
                 else:
@@ -175,16 +178,14 @@ def run_subject_to_node_tree(run_subject):
 def walk_tree(n, depth=0):
     indent = "  " * depth
 
-    if (isinstance(n, TextNode) or n.tag == "#text"):
+    if isinstance(n, TextNode):
         print(n)
         print(indent + "TextNode: " + n.text)
-        
     else:
         label = n.tag if n.tag else ""
         if n.id != "none":
             label += f"#{n.id}"
         print(indent + label)
-    if not (isinstance(n, TextNode) or n.tag == "#text"):
         for child in n.children:
             walk_tree(child, depth + 1)
 
@@ -193,8 +194,8 @@ def walk_tree_verbose(n, depth=0):
     parent_id = n.parent.id if n.parent is not None else None
 
     print(f"{indent}Node:")
-    print(f"{indent}  tag: {n.tag}")
-    if isinstance(n, TextNode) or n.tag == "#text":
+    print(f"{indent}  tag: {getattr(n, 'tag', None)}")
+    if isinstance(n, TextNode):
         print(f"{indent}  text: {n.text}")
         print(f"{indent}  parent: {n.parent.id}")
         return
@@ -212,7 +213,7 @@ def build_down(a, b, parent=None):
     if merged is None:
         return None
 
-    if isinstance(merged, TextNode) or getattr(merged, "tag", None) == "#text":
+    if isinstance(merged, TextNode):
         return merged
 
     if getattr(merged, "tag", None) == "empty":

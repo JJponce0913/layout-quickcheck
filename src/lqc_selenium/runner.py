@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-from contextlib import redirect_stdout
-import io
-import os
-import pickle
-import re
 import sys
 import traceback
 
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
-from lqc.generate.web_page.create import save_as_web_page
 from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
 from lqc.util.counter import Counter
@@ -20,122 +14,43 @@ from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from tooling.rule_engine import should_skip
+from lqc.rules.rule_engine import should_skip
 
 
-def _ensure_dir(d):
-    if not os.path.isdir(d):
-        os.makedirs(d, exist_ok=True)
-
-def _next_html_index(d):
-    _ensure_dir(d)
-    nums = []
-    pat = re.compile(r"^(\d+)\.html$")
-    for f in os.listdir(d):
-        m = pat.match(f)
-        if m:
-            nums.append(int(m.group(1)))
-    return (max(nums) + 1) if nums else 0
-
-def _save_step_html(run_subject, folder, idx):
-    path = os.path.join(folder, f"{idx:06d}.html")
-    save_as_web_page(run_subject, path)
-    return idx + 1
-
-def minify_debug(target_browser, run_subject):
-    folder = "tmp_generated_files/debug"
-    idx = _next_html_index(folder)
-    pickle_addr = f"{folder}/pre.pkl"
-    with open(pickle_addr, "wb") as f:
-        pickle.dump(run_subject, f)
-
-    print(f"STEP {idx:06d} PRE")
-    idx = _save_step_html(run_subject, folder, idx)
-    print("Minifying...")
-    stepsFactory = MinifyStepFactory()
-    while True:
-        proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
-        if proposed_run_subject is None:
-            break
-        print(f"STEP {idx:06d} PROPOSED")
-        idx = _save_step_html(proposed_run_subject, folder, idx)
-        run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
-        state = "BUG" if run_result.isBug() else "PASS"
-        print(f"STEP {idx-1:06d} RESULT {state}")
-        if run_result.isBug():
-            run_subject = proposed_run_subject
-            print(f"STEP {idx:06d} ACCEPTED")
-            idx = _save_step_html(run_subject, folder, idx)
-        else:
-            print(f"STEP {idx:06d} REJECTED")
-    run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    print(f"STEP {idx:06d} FINAL")
-    idx = _save_step_html(run_subject, folder, idx)
-    print("Minifying done.")
-    return (run_subject, run_result, pickle_addr)
-
-def visible_contents(parent):
-    out = []
-    for c in parent.contents:
-        if isinstance(c, str):
-            if c.strip():
-                out.append(c)
-        else:
-            out.append(c)
-    return out
-
-def node_matches(node, spec):
-    if spec == "text":
-        return isinstance(node, str) and bool(node.strip())
-    if isinstance(spec, str):
-        return getattr(node, "name", None) == spec
-    if isinstance(spec, dict):
-        tag = spec.get("tag")
-        attrs = spec.get("attrs", {})
-        if tag and getattr(node, "name", None) != tag:
-            return False
-        for k, v in attrs.items():
-            if node.get(k) != v:
-                return False
-        return True
-    return False
-
-
-
-
-def minify(target_browser, run_subject):
-    prerun_subject = run_subject
+def minify(target_browser, minified_run_subject):
+    # Copy the original subject before minifying so we can return both versions
+    prerun_subject = minified_run_subject
     conf = Config()
     rules = conf.getRules()
 
-    with redirect_stdout(io.StringIO()):
-        shouldSkip = should_skip(run_subject, rules)
+    shouldSkip = should_skip(minified_run_subject, rules)
 
-    #Skipe minimization if shouldSkip is True
+    # Skip minimization if shouldSkip is True
     if shouldSkip:
-        run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, prerun_subject, shouldSkip) 
+        run_result, _ = test_combination(target_browser.getDriver(), minified_run_subject)
+        return (minified_run_subject, run_result, prerun_subject, shouldSkip) 
 
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
     while True:
         # Get the next candidate minimized version of run_subject
-        temp_run_subject = stepsFactory.next_minimization_step(run_subject)
+        proposed_run_subject = stepsFactory.next_minimization_step(minified_run_subject)
         # If there are no more steps, exit the loop
-        if temp_run_subject is None:
+        if proposed_run_subject is None:
             # Break out when minimization can't shrink the subject further
             break
 
         # Test the proposed minimized subject in the target browser
-        run_result, *_ = test_combination(target_browser.getDriver(), temp_run_subject)
+        run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
 
         # If the minimized subject still triggers the bug, accept it as the new subject
         if run_result.isBug():
-            run_subject = temp_run_subject
+            minified_run_subject = proposed_run_subject
 
-    run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,prerun_subject, shouldSkip)
+    run_result, _ = test_combination(target_browser.getDriver(), minified_run_subject)
+    # Return the minimized subject, result, original pre-minimized subject, and skip flag
+    return (minified_run_subject, run_result, prerun_subject, shouldSkip)
 
 
 
@@ -154,8 +69,7 @@ def find_bugs(counter):
         else:
             # Stage 2 - Minifying Bug
             print("Bug found. Minifying...")
-            prerun_subject = run_subject
-            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, prerun_subject)
+            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, run_subject)
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
 
             # False Positive Detection
@@ -190,7 +104,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+DEFAULT_CONFIG_FILE = "./config/change.json"
 
 
 if __name__ == "__main__":
