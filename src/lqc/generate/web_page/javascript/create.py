@@ -45,3 +45,4 @@ def get_dimensions(run_subject: RunSubject, run_result: RunResult):
             ret_string += f'printDimensions({elementId}, ["x", "y", "top", "bottom"]);\n'
     
     return ret_string
+

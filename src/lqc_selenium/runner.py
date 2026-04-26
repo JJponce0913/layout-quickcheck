@@ -17,25 +17,23 @@ from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from lqc.rules.rule_engine import should_skip
 
 
-def minify(target_browser, minified_run_subject):
+def minify(target_browser, run_subject):
     # Copy the original subject before minifying so we can return both versions
-    prerun_subject = minified_run_subject
     conf = Config()
     rules = conf.getRules()
 
-    shouldSkip = should_skip(minified_run_subject, rules)
+    shouldSkip = should_skip(run_subject, rules)
 
     # Skip minimization if shouldSkip is True
     if shouldSkip:
-        run_result, _ = test_combination(target_browser.getDriver(), minified_run_subject)
-        return (minified_run_subject, run_result, prerun_subject, shouldSkip) 
+        run_result, _ = test_combination(target_browser.getDriver(), run_subject)
+        return (run_subject, run_result, shouldSkip) 
 
     stepsFactory = MinifyStepFactory()
-
     # Keep applying minimization steps until no more are available
     while True:
         # Get the next candidate minimized version of run_subject
-        proposed_run_subject = stepsFactory.next_minimization_step(minified_run_subject)
+        proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
         # If there are no more steps, exit the loop
         if proposed_run_subject is None:
             # Break out when minimization can't shrink the subject further
@@ -46,11 +44,12 @@ def minify(target_browser, minified_run_subject):
 
         # If the minimized subject still triggers the bug, accept it as the new subject
         if run_result.isBug():
-            minified_run_subject = proposed_run_subject
+            run_subject = proposed_run_subject
 
-    run_result, _ = test_combination(target_browser.getDriver(), minified_run_subject)
+    # Create final representations of minified files
+    run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     # Return the minimized subject, result, original pre-minimized subject, and skip flag
-    return (minified_run_subject, run_result, prerun_subject, shouldSkip)
+    return (run_subject, run_result, shouldSkip)
 
 
 
@@ -73,7 +72,7 @@ def find_bugs(counter):
             else:
                 print("Found bug. Minifying...")
                 
-            (minified_run_subject, minified_run_result, prerun_subject, shouldSkip) = minify(target_browser, run_subject)
+            (minified_run_subject, minified_run_result, shouldSkip) = minify(target_browser, run_subject)
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
 
             # False Positive Detection
@@ -94,7 +93,7 @@ def find_bugs(counter):
                     minified_run_subject,
                     minified_run_result,
                     test_filepath,
-                    prerun_subject,
+                    run_subject,
                     shouldSkip
                 )
                 print(f"Bug report saved: {url}")

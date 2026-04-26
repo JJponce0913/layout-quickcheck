@@ -8,7 +8,7 @@ if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
 from lqc.rules.rule_engine import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles, merge_folder
-from tooling.tree_merge import walk_tree_verbose
+from lqc.rules.tree_merge import walk_tree_verbose
 
 """
 Merges tree structures from run_subject PKL files in a base folder,

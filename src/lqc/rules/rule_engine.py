@@ -3,7 +3,7 @@ import pickle
 import time
 import json
 
-from tooling.tree_merge import run_subject_to_node_tree, merge_trees
+from lqc.rules.tree_merge import run_subject_to_node_tree, merge_trees
 
 
 def load_tree_start_pairs(folder_path):

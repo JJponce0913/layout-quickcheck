@@ -1,6 +1,7 @@
 import atexit
 import types
 import subprocess
+import shutil
 
 from lqc.config.config import Config
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -83,8 +84,6 @@ def finish(webdriver):
         pass
 
 
-import shutil
-
 def detectDriverPath(driver, config_name):
     driver_path = shutil.which(driver)
     if driver_path:
@@ -93,7 +92,6 @@ def detectDriverPath(driver, config_name):
     else:
         print(f"Warning: No {config_name} Found. You may need to install {driver} or put the path in the config.")
         return None
-
     
 
 class Variant:
@@ -109,8 +107,6 @@ class Variant:
 
     def webdriver(self):
         raise NotImplemented("Variant().webdriver() should be overridden")
-
-
 
 class ChromeVariant(Variant):
     def __init__(self, name=None, slow=False, width=1000, height=1000, args=[], headless=True, webdriver_path=None, binary_path=None):
