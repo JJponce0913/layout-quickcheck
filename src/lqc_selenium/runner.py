@@ -3,7 +3,6 @@
 import argparse
 import sys
 import traceback
-
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
@@ -38,10 +37,9 @@ def minify(target_browser, run_subject):
         if proposed_run_subject is None:
             # Break out when minimization can't shrink the subject further
             break
-
+        
         # Test the proposed minimized subject in the target browser
         run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
-
         # If the minimized subject still triggers the bug, accept it as the new subject
         if run_result.isBug():
             run_subject = proposed_run_subject
@@ -50,7 +48,6 @@ def minify(target_browser, run_subject):
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     # Return the minimized subject, result, original pre-minimized subject, and skip flag
     return (run_subject, run_result, shouldSkip)
-
 
 
 def find_bugs(counter):
@@ -62,25 +59,26 @@ def find_bugs(counter):
         # Stage 1 - Generate & Test
         run_subject = generate_run_subject()
         (run_result, test_filepath) = test_combination(target_browser.getDriver(), run_subject, keep_file=True)
-        
+
         if not run_result.isBug():
             counter.incSuccess()
+
         else:
             # Stage 2 - Minifying Bug
             if run_result.type == BugType.PAGE_CRASH:
                 print("Found a page that crashes. Minifying...")
             else:
                 print("Found bug. Minifying...")
-                
+
             (minified_run_subject, minified_run_result, shouldSkip) = minify(target_browser, run_subject)
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
 
             # False Positive Detection
             if not minified_run_result.isBug():
-                print("Skipped: no repro after minify.")
+                print("False positive (could not reproduce)")
                 counter.incNoRepro()
             elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
-                print("Skipped: no modified styles after minify.")
+                print("False positive (no modified styles)")
                 counter.incNoMod()
 
             else:
@@ -88,6 +86,7 @@ def find_bugs(counter):
 
                 # Stage 3 - Test Variants
                 variants = test_variants(minified_run_subject)
+
                 url = save_bug_report(
                     variants,
                     minified_run_subject,
@@ -107,8 +106,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/change.json"
-
+DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
 
 if __name__ == "__main__":
 
@@ -119,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--crash-limit", help="quit after crashing this many times", type=int, default=1)
     parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
     args = parser.parse_args()
-    
+
     # Initialize Config
     print(f"Using config file {args.config_file}")
     conf = parse_config(args.config_file)
@@ -148,4 +146,5 @@ if __name__ == "__main__":
         for exc in counter.crash_exceptions:
             traceback.print_exception(exc["etype"], exc["value"], exc["traceback"])
             print("-"*60 + "\n")
+
 

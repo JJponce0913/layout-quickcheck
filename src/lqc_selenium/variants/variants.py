@@ -7,7 +7,6 @@ from lqc.config.config import Config
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.webdriver import WebDriver as FirefoxWebDriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -124,13 +123,16 @@ class ChromeVariant(Variant):
     def webdriver(self):
         if not self.webdriver_path:
             raise RuntimeError("Chrome Driver not found")
+
         chrome_options = ChromeOptions()
+
         if self.headless:
             chrome_options.add_argument("--headless=new")
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
         if self.binary_path:
             chrome_options.binary_location = self.binary_path
+
         for arg in self.args:
             chrome_options.add_argument(arg)
         service = Service(executable_path=self.webdriver_path, log_output=subprocess.DEVNULL)
@@ -139,8 +141,6 @@ class ChromeVariant(Variant):
         drv.finish = types.MethodType(finish, drv)
         atexit.register(drv.finish)
         return drv
-
-
 
 class FirefoxVariant(Variant):
     def __init__(self, name=None, slow=False, width=1000, height=1000, options=None, headless=True, webdriver_path=None, binary_path=None):

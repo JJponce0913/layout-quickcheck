@@ -32,7 +32,7 @@ def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
 
         # Wait until body element is loaded
         WebDriverWait(webdriver, timeout, poll_frequency=poll_frequency).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-
+        
         if slow: time.sleep(0.5)
 
         # Make the style changes
