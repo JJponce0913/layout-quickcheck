@@ -9,7 +9,7 @@ from lqc.generate.web_page.run_subject_converter import copyExternalJSFiles
 from lqc.model.constants import BugType
 from lqc.model.run_result import RunResult, RunResultLayoutBug
 from lqc.model.run_subject import RunSubject
-from tooling.rule_engine import recompute_bug_group_artifacts
+from tooling.rule_engine import dissolve_bug_group, recompute_bug_group_artifacts
 
 
 def save_bug_report(
@@ -131,7 +131,9 @@ def save_bug_report_custom(
     prerun_subject: RunSubject,
     path,
     shouldSkip,
-    rule_name
+    rule_name,
+    sorting_seconds=None,
+    true_minification_seconds=None,
 ):
     report_run_subject = minified_run_subject or prerun_subject
     parent_path = path
@@ -186,6 +188,8 @@ def save_bug_report_custom(
         "shouldSkip": shouldSkip,
         "matched_rule_name": rule_name,
         "matched_rule_folder": matched_rule_folder,
+        "sorting_seconds": sorting_seconds,
+        "true_minification_seconds": true_minification_seconds,
     }
 
     if isinstance(run_result, RunResultLayoutBug):
@@ -196,7 +200,12 @@ def save_bug_report_custom(
         f.write(json.dumps(json_data, indent=4, default=lambda o: o.__dict__))
 
     if group_path is not None:
-        recompute_bug_group_artifacts(group_path)
+        rule = recompute_bug_group_artifacts(group_path)
+        if rule is None:
+            moved_paths = dissolve_bug_group(group_path)
+            moved_bug_folder = moved_paths.get(os.path.abspath(bug_folder))
+            if moved_bug_folder is not None:
+                minified_bug = os.path.join(moved_bug_folder, "minified_bug.html")
 
     url = "file://" + os.path.abspath(minified_bug)
     return url

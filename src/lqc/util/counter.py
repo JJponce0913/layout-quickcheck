@@ -14,6 +14,8 @@ class Counter():
         self.num_crash = 0                  # Number of times the program crashed
         self.started_at_epoch = time()      # Start time for this process run
         self.total_minify_seconds = 0.0     # Cumulative time spent in minify stage
+        self.total_sort_seconds = 0.0       # Cumulative time spent sorting bugs
+        self.total_true_minify_seconds = 0.0  # Cumulative time spent in the minimization loop
 
         # Criteria for when to stop testing
         self.bug_limit = bug_limit          # Stop when the number of bugs found reaches bug_limit
@@ -54,6 +56,16 @@ class Counter():
         if seconds is None:
             return
         self.total_minify_seconds += max(0.0, float(seconds))
+
+    def addSortTime(self, seconds):
+        if seconds is None:
+            return
+        self.total_sort_seconds += max(0.0, float(seconds))
+
+    def addTrueMinifyTime(self, seconds):
+        if seconds is None:
+            return
+        self.total_true_minify_seconds += max(0.0, float(seconds))
 
     def getRuntimeSeconds(self):
         return max(0.0, time() - self.started_at_epoch)

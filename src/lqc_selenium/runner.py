@@ -70,6 +70,8 @@ def write_run_summary(counter, target_root=RUN_SUMMARY_ROOT):
         "single_bugs": sorted(single_bug_dirs),
         "runtime_seconds": round(counter.getRuntimeSeconds(), 3),
         "minify_seconds": round(counter.total_minify_seconds, 3),
+        "sorting_seconds": round(counter.total_sort_seconds, 3),
+        "true_minification_seconds": round(counter.total_true_minify_seconds, 3),
     }
 
     summary_path = os.path.join(target_root, "run_summary.json")
@@ -250,19 +252,24 @@ def extract_bug_group_rules_to_json(
 
 def minify(target_browser, run_subject):
     prerun_subject = run_subject
+    sort_started_at = time()
     path,shouldSkip,rule_name = sort_single_bug(
         base_dir="bug_reports/tester/sort-repo",
         run_subject=run_subject,
         safe_dir="bug_reports/safe",
         verbose=VERBOSE,
     )
+    sort_elapsed_seconds = time() - sort_started_at
+    print(f"Sorting time: {sort_elapsed_seconds:.2f}s")
     print(f"Matching rule folder: {path}")
     
     #Skipe minimization if shouldSkip is True
-    """ if shouldSkip:
+    if shouldSkip:
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, prerun_subject, path,shouldSkip, rule_name)  """
+        print("True minification time: 0.00s")
+        return (run_subject, run_result, prerun_subject, path,shouldSkip, rule_name, sort_elapsed_seconds, 0.0) 
 
+    true_minify_started_at = time()
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
@@ -282,7 +289,9 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,prerun_subject, path,shouldSkip, rule_name)
+    true_minify_elapsed_seconds = time() - true_minify_started_at
+    print(f"True minification time: {true_minify_elapsed_seconds:.2f}s")
+    return (run_subject, run_result,prerun_subject, path,shouldSkip, rule_name, sort_elapsed_seconds, true_minify_elapsed_seconds)
 
 
 
@@ -334,9 +343,20 @@ def find_bugs(counter):
             print("Bug found. Minifying...")
             prerun_subject = run_subject
             minify_started_at = time()
-            (minified_run_subject, minified_run_result, prerun_subject,path, shouldSkip, rule_name) = minify(target_browser, prerun_subject)
+            (
+                minified_run_subject,
+                minified_run_result,
+                prerun_subject,
+                path,
+                shouldSkip,
+                rule_name,
+                sorting_seconds,
+                true_minification_seconds,
+            ) = minify(target_browser, prerun_subject)
             minify_elapsed_seconds = time() - minify_started_at
             counter.addMinifyTime(minify_elapsed_seconds)
+            counter.addSortTime(sorting_seconds)
+            counter.addTrueMinifyTime(true_minification_seconds)
             print(
                 f"Minify time: {minify_elapsed_seconds:.2f}s "
                 f"(total {counter.total_minify_seconds:.2f}s)"
@@ -353,7 +373,9 @@ def find_bugs(counter):
                     prerun_subject=prerun_subject,
                     path=path,
                     shouldSkip=shouldSkip,
-                    rule_name=rule_name
+                    rule_name=rule_name,
+                    sorting_seconds=sorting_seconds,
+                    true_minification_seconds=true_minification_seconds,
                 )
 
             # False Positive Detection
@@ -379,6 +401,8 @@ def find_bugs(counter):
                     path=path,
                     shouldSkip=shouldSkip,
                     rule_name=rule_name,
+                    sorting_seconds=sorting_seconds,
+                    true_minification_seconds=true_minification_seconds,
                 )
                 print(f"Bug report saved: {url}")
 
