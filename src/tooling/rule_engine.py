@@ -729,7 +729,7 @@ def sort_single_bug(base_dir, run_subject, safe_dir, verbose=False):
         if verbose:
             print("[sort_single_bug] known_group_candidate_rule:")
             pprint.pprint(rule)
-
+        
         _, true_safe, _ = check_all_pkls(safe_dir, [rule], verbose=verbose)
         log(f"[sort_single_bug] known_group_counts true_safe={true_safe}")
 

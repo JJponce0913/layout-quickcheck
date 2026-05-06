@@ -24,6 +24,7 @@ from lqc_selenium.report.bug_report_helper import save_bug_report, save_bug_repo
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
+from lqc_selenium.api import write_run_summary as write_run_summary_file
 from tooling.rule_engine import should_skip, sort_single_bug
 
 VERBOSE = False
@@ -67,12 +68,12 @@ def write_run_summary(counter, target_root=RUN_SUMMARY_ROOT):
         "total_bug_directories": len(single_bug_dirs) + grouped_bug_instances,
         "bug_groups": sorted(group_dirs),
         "single_bugs": sorted(single_bug_dirs),
+        "runtime_seconds": round(counter.getRuntimeSeconds(), 3),
+        "minify_seconds": round(counter.total_minify_seconds, 3),
     }
 
     summary_path = os.path.join(target_root, "run_summary.json")
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2)
-
+    write_run_summary_file(summary, summary_path=summary_path)
     return summary_path
 
 
@@ -332,7 +333,14 @@ def find_bugs(counter):
             # Stage 2 - Minifying Bug
             print("Bug found. Minifying...")
             prerun_subject = run_subject
+            minify_started_at = time()
             (minified_run_subject, minified_run_result, prerun_subject,path, shouldSkip, rule_name) = minify(target_browser, prerun_subject)
+            minify_elapsed_seconds = time() - minify_started_at
+            counter.addMinifyTime(minify_elapsed_seconds)
+            print(
+                f"Minify time: {minify_elapsed_seconds:.2f}s "
+                f"(total {counter.total_minify_seconds:.2f}s)"
+            )
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
             print(f"Rule name: {rule_name}")
             # Save bug report that matches a rule 
