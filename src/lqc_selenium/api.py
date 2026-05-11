@@ -8,6 +8,8 @@ import os
 DEFAULT_RUN_SUMMARY_PATH = os.path.join(
     "bug_reports", "tester", "sort-repo", "run_summary.json"
 )
+BUG_COUNT_SNAPSHOT = 120
+RUNTIME_SECONDS_SNAPSHOT = 1968.045
 
 NUMERIC_SUMMARY_KEYS = {
     "tests_run",
@@ -22,6 +24,8 @@ NUMERIC_SUMMARY_KEYS = {
     "total_bug_directories",
     "runtime_seconds",
     "minify_seconds",
+    "sorting_seconds",
+    "true_minification_seconds",
 }
 
 
@@ -42,6 +46,8 @@ def _default_summary(summary_path=DEFAULT_RUN_SUMMARY_PATH):
         "total_bug_directories": 0,
         "runtime_seconds": 0.0,
         "minify_seconds": 0.0,
+        "sorting_seconds": 0.0,
+        "true_minification_seconds": 0.0,
         "bug_groups": [],
         "single_bugs": [],
     }
@@ -62,6 +68,31 @@ def read_run_summary(summary_path=DEFAULT_RUN_SUMMARY_PATH):
     return summary
 
 
+def _write_summary_snapshot_once(payload, summary_path, snapshot_name):
+    snapshot_path = os.path.join(os.path.dirname(summary_path), snapshot_name)
+    if os.path.exists(snapshot_path):
+        return
+
+    with open(snapshot_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+
+
+def _write_threshold_snapshots(payload, summary_path):
+    if payload.get("bugs_found", 0) >= BUG_COUNT_SNAPSHOT:
+        _write_summary_snapshot_once(
+            payload,
+            summary_path,
+            f"run_summary_{BUG_COUNT_SNAPSHOT}_bugs.json",
+        )
+
+    if payload.get("runtime_seconds", 0.0) >= RUNTIME_SECONDS_SNAPSHOT:
+        _write_summary_snapshot_once(
+            payload,
+            summary_path,
+            f"run_summary_{RUNTIME_SECONDS_SNAPSHOT:.3f}s.json",
+        )
+
+
 def write_run_summary(summary, summary_path=DEFAULT_RUN_SUMMARY_PATH):
     payload = _default_summary(summary_path)
     payload.update(summary if isinstance(summary, dict) else {})
@@ -71,6 +102,7 @@ def write_run_summary(summary, summary_path=DEFAULT_RUN_SUMMARY_PATH):
     os.makedirs(os.path.dirname(summary_path), exist_ok=True)
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
+    _write_threshold_snapshots(payload, summary_path)
 
     return summary_path
 

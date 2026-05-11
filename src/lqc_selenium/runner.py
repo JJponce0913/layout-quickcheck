@@ -70,6 +70,8 @@ def write_run_summary(counter, target_root=RUN_SUMMARY_ROOT):
         "single_bugs": sorted(single_bug_dirs),
         "runtime_seconds": round(counter.getRuntimeSeconds(), 3),
         "minify_seconds": round(counter.total_minify_seconds, 3),
+        "sorting_seconds": round(counter.total_sorting_seconds, 3),
+        "true_minification_seconds": round(counter.total_true_minification_seconds, 3),
     }
 
     summary_path = os.path.join(target_root, "run_summary.json")
@@ -250,22 +252,36 @@ def extract_bug_group_rules_to_json(
 
 def minify(target_browser, run_subject):
     prerun_subject = run_subject
+    sorting_started_at = time()
     path,shouldSkip,rule_name = sort_single_bug(
         base_dir="bug_reports/tester/sort-repo",
         run_subject=run_subject,
         safe_dir="bug_reports/safe",
         verbose=VERBOSE,
     )
+    sorting_elapsed_seconds = time() - sorting_started_at
     print(f"Matching rule folder: {path}")
     
     #Skipe minimization if shouldSkip is True
-    """ if shouldSkip:
+    if shouldSkip:
+        true_minification_started_at = time()
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-        return (run_subject, run_result, prerun_subject, path,shouldSkip, rule_name)  """
+        true_minification_elapsed_seconds = time() - true_minification_started_at
+        return (
+            run_subject,
+            run_result,
+            prerun_subject,
+            path,
+            shouldSkip,
+            rule_name,
+            sorting_elapsed_seconds,
+            true_minification_elapsed_seconds,
+        )
 
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
+    true_minification_started_at = time()
     while True:
         # Get the next candidate minimized version of run_subject
         temp_run_subject = stepsFactory.next_minimization_step(run_subject)
@@ -282,7 +298,17 @@ def minify(target_browser, run_subject):
             run_subject = temp_run_subject
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result,prerun_subject, path,shouldSkip, rule_name)
+    true_minification_elapsed_seconds = time() - true_minification_started_at
+    return (
+        run_subject,
+        run_result,
+        prerun_subject,
+        path,
+        shouldSkip,
+        rule_name,
+        sorting_elapsed_seconds,
+        true_minification_elapsed_seconds,
+    )
 
 
 
@@ -334,12 +360,31 @@ def find_bugs(counter):
             print("Bug found. Minifying...")
             prerun_subject = run_subject
             minify_started_at = time()
-            (minified_run_subject, minified_run_result, prerun_subject,path, shouldSkip, rule_name) = minify(target_browser, prerun_subject)
+            (
+                minified_run_subject,
+                minified_run_result,
+                prerun_subject,
+                path,
+                shouldSkip,
+                rule_name,
+                sorting_elapsed_seconds,
+                true_minification_elapsed_seconds,
+            ) = minify(target_browser, prerun_subject)
             minify_elapsed_seconds = time() - minify_started_at
             counter.addMinifyTime(minify_elapsed_seconds)
+            counter.addSortingTime(sorting_elapsed_seconds)
+            counter.addTrueMinificationTime(true_minification_elapsed_seconds)
             print(
                 f"Minify time: {minify_elapsed_seconds:.2f}s "
                 f"(total {counter.total_minify_seconds:.2f}s)"
+            )
+            print(
+                f"Sorting time: {sorting_elapsed_seconds:.2f}s "
+                f"(total {counter.total_sorting_seconds:.2f}s)"
+            )
+            print(
+                f"True minification time: {true_minification_elapsed_seconds:.2f}s "
+                f"(total {counter.total_true_minification_seconds:.2f}s)"
             )
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
             print(f"Rule name: {rule_name}")
