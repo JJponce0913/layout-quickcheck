@@ -22,18 +22,14 @@ class FileConfig:
             os.makedirs(self.layout_file_dir)
         if not os.path.exists(self.bug_report_file_dir):
             os.makedirs(self.bug_report_file_dir)
-    
-
-    def getTimestampFilePath(self):
-        timestamp = datetime.now()
-        formatted_timestamp = timestamp.strftime(timestamp_format)
-        filename = f'test-file-{formatted_timestamp}.html'
-        filepath = os.path.join(self.layout_file_dir, filename)
-        return self.layout_file_dir, filepath, filename
-    
-
-    def getTimestampBugReport(self):
-        timestamp = datetime.now()
-        formatted_timestamp = timestamp.strftime(timestamp_format)
-        bug_folder = os.path.join(self.bug_report_file_dir, f"bug-report-{formatted_timestamp}")
-        return bug_folder
+            
+        def getCustomTimestampPath(self, custom_folder: str):
+            timestamp = datetime.now()
+            formatted_timestamp = timestamp.strftime(timestamp_format)
+            custom_dir = os.path.join(self.bug_report_file_dir, custom_folder)
+            if not os.path.exists(custom_dir):
+                os.makedirs(custom_dir)        
+                dirpath = os.path.join(custom_dir, f"{custom_folder}-{formatted_timestamp}")
+            if not os.path.exists(dirpath):
+                os.makedirs(dirpath)
+            return dirpath

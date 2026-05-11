@@ -1,33 +1,53 @@
 #!/usr/bin/env python3
 
-import sys, traceback, argparse
+import argparse
+import sys
+import traceback
 from lqc.config.config import Config, parse_config
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
 from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
-from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc.util.counter import Counter
+from lqc_selenium.report.bug_report_helper import save_bug_report
+from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from lqc_selenium.selenium_harness.layout_tester import test_combination
+from lqc.rules.rule_engine import should_skip
 
 
 def minify(target_browser, run_subject):
+    # Copy the original subject before minifying so we can return both versions
+    conf = Config()
+    rules = conf.getRules()
+
+    shouldSkip = should_skip(run_subject, rules)
+
+    # Skip minimization if shouldSkip is True
+    if shouldSkip:
+        run_result, _ = test_combination(target_browser.getDriver(), run_subject)
+        return (run_subject, run_result, shouldSkip) 
 
     stepsFactory = MinifyStepFactory()
+    # Keep applying minimization steps until no more are available
     while True:
+        # Get the next candidate minimized version of run_subject
         proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
-        if proposed_run_subject == None:
+        # If there are no more steps, exit the loop
+        if proposed_run_subject is None:
+            # Break out when minimization can't shrink the subject further
             break
         
+        # Test the proposed minimized subject in the target browser
         run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
+        # If the minimized subject still triggers the bug, accept it as the new subject
         if run_result.isBug():
             run_subject = proposed_run_subject
 
     # Create final representations of minified files
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    return (run_subject, run_result)
+    # Return the minimized subject, result, original pre-minimized subject, and skip flag
+    return (run_subject, run_result, shouldSkip)
 
 
 def find_bugs(counter):
@@ -50,7 +70,8 @@ def find_bugs(counter):
             else:
                 print("Found bug. Minifying...")
 
-            (minified_run_subject, minified_run_result) = minify(target_browser, run_subject)
+            (minified_run_subject, minified_run_result, shouldSkip) = minify(target_browser, run_subject)
+            print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
 
             # False Positive Detection
             if not minified_run_result.isBug():
@@ -64,17 +85,17 @@ def find_bugs(counter):
                 counter.incError()
 
                 # Stage 3 - Test Variants
-                print("Minified bug. Testing variants...")
                 variants = test_variants(minified_run_subject)
 
-                print("Variants tested. Saving bug report...")
                 url = save_bug_report(
                     variants,
                     minified_run_subject,
                     minified_run_result,
-                    test_filepath
+                    test_filepath,
+                    run_subject,
+                    shouldSkip
                 )
-                print(url)
+                print(f"Bug report saved: {url}")
 
         counter.incTests()
         output = counter.getStatusString()

@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import pickle
 from datetime import datetime
 from lqc.config.file_config import FileConfig
 from lqc.generate.web_page.create import save_as_web_page
@@ -12,12 +13,14 @@ from lqc.model.run_subject import RunSubject
 
 def save_bug_report(
     variants,
-    run_subject: RunSubject,
+    minified_run_subject: RunSubject,
     run_result: RunResult,
-    original_filepath
+    original_filepath,
+    prerun_subject: RunSubject,
+    shouldSkip
 ):
     file_config = FileConfig()
-    bug_folder = file_config.getTimestampBugReport()
+    bug_folder, _ = file_config.getCustomTimestampBugReport("bug_report")
 
     # Create a folder to hold all the bug report files
     os.mkdir(bug_folder)
@@ -28,16 +31,27 @@ def save_bug_report(
 
     # Copy the minimized bug
     minified_bug = os.path.join(bug_folder, "minified_bug.html")
-    save_as_web_page(run_subject, minified_bug, run_result=run_result)
+    print(f"Saving minimized bug to {minified_bug}")
+    save_as_web_page(minified_run_subject, minified_bug, run_result=run_result)
     copyExternalJSFiles(bug_folder)
 
     # Custom bug helper file - JSON file
-    styles_used = list(run_subject.all_style_names())
+    styles_used = list(minified_run_subject.all_style_names())
     styles_used.sort()
     styles_used_string = ",".join(styles_used)
-    base_styles = list(run_subject.base_styles.all_style_names())
-    modified_styles = list(run_subject.modified_styles.all_style_names())
+    base_styles = list(minified_run_subject.base_styles.all_style_names())
+    modified_styles = list(minified_run_subject.modified_styles.all_style_names())
     bug_type = "Page Crash" if run_result.type == BugType.PAGE_CRASH else "Under Invalidation"
+
+    
+    pickle_addr = f"{bug_folder}/minified_run_subject.pkl"
+    with open(pickle_addr, "wb") as f:
+        pickle.dump(minified_run_subject, f)
+
+    prerun_subject_addr = f"{bug_folder}/run_subject_prerun.pkl"
+    with open(prerun_subject_addr, "wb") as f:
+        pickle.dump(prerun_subject, f)
+    
     json_data = {
         "datetime": datetime.now().isoformat(),
         "bug_type": bug_type,
@@ -46,8 +60,12 @@ def save_bug_report(
         "base_styles": base_styles,
         "modified_styles": modified_styles,
         "variants": variants,
-        "run_subject": run_subject,
+        "minified_run_subject": minified_run_subject,
+        "prerun_subject": prerun_subject,
+        "pickle_addr": pickle_addr,
+        "shouldSkip": shouldSkip
     }
+    
     if isinstance(run_result, RunResultLayoutBug):
         json_data["differences"] = run_result.element_dimensions
 

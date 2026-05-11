@@ -14,7 +14,7 @@ def Minify_RemoveEachElement(run_subject):
 
     for element in elements(run_subject.html_tree.tree):
 
-        def removeElement(proposed_run_subject):
+        def removeElement(proposed_run_subject, element=element):
             proposed_run_subject.removeElementById(element['id'])
             return proposed_run_subject
 

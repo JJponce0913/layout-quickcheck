@@ -38,7 +38,7 @@ def get_dimensions(run_subject: RunSubject, run_result: RunResult):
             if el['id']:
                 elementId = json.dumps(el['id'])
                 differing_dims = json.dumps(el["differing_dims"])
-                ret_string += f'printDimensions({el['id']}, {differing_dims});\n'
+                ret_string += f'printDimensions({elementId}, {differing_dims});\n'
     
     else:
         for elementId in run_subject.getElementIds():

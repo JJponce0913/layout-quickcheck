@@ -43,8 +43,17 @@ def run_test_using_js_diff_detect(test_url, webdriver, slow=False) -> RunResult:
             return RunResultPass()
 
     except TimeoutException:
+        print("Outcome: TIMEOUT")
         print("Failed to load test page due to timeout")
         return None
-    except WebDriverException:
+    except WebDriverException as e:
+        print("Outcome: CRASH")
+        print(f"WebDriverException: {e}")
         return RunResultCrash()
+    except Exception as e:
+        print("Outcome: ERROR")
+        print(f"Unhandled exception: {e}")
+        raise
+
+
 

@@ -25,7 +25,7 @@ class RunResultCrash(RunResult):
         super().__init__(BugType.PAGE_CRASH)
 
     def isBug(self):
-        return True
+        return self.type == BugType.PAGE_CRASH
 
 
 class RunResultLayoutBug(RunResult):

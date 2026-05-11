@@ -1,10 +1,12 @@
 import atexit
 import types
 import subprocess
+import shutil
 
 from lqc.config.config import Config
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.webdriver import WebDriver as FirefoxWebDriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -82,8 +84,8 @@ def finish(webdriver):
 
 
 def detectDriverPath(driver, config_name):
-    status, driver_path = subprocess.getstatusoutput(f"which {driver}")
-    if status == 0:
+    driver_path = shutil.which(driver)
+    if driver_path:
         print(f"Log: No {config_name} path in config. Using {driver_path}")
         return driver_path
     else:
@@ -125,23 +127,20 @@ class ChromeVariant(Variant):
         chrome_options = ChromeOptions()
 
         if self.headless:
-            chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument("--headless=new")
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
         if self.binary_path:
             chrome_options.binary_location = self.binary_path
-        
+
         for arg in self.args:
             chrome_options.add_argument(arg)
-
-        chrome_webdriver = ChromeWebDriver(executable_path=self.webdriver_path, options=chrome_options)
-        
-        chrome_webdriver.set_window_size(self.width, self.height)
-
-        chrome_webdriver.finish = types.MethodType(finish, chrome_webdriver)
-        atexit.register(chrome_webdriver.finish)
-
-        return chrome_webdriver
+        service = Service(executable_path=self.webdriver_path, log_output=subprocess.DEVNULL)
+        drv = webdriver.Chrome(service=service, options=chrome_options)
+        drv.set_window_size(self.width, self.height)
+        drv.finish = types.MethodType(finish, drv)
+        atexit.register(drv.finish)
+        return drv
 
 class FirefoxVariant(Variant):
     def __init__(self, name=None, slow=False, width=1000, height=1000, options=None, headless=True, webdriver_path=None, binary_path=None):

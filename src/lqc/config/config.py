@@ -27,6 +27,7 @@ class Config:
             # Class Initialization Code
             cls.__instance.style_weights = config.get("style-weights", {})
             cls.__instance.variants = config.get("variants", [])
+            cls.__instance.rules = config.get("rules", [])
             paths = config.get("paths", {})
             cls.__instance.path_bug_reports_dir = paths.get("bug-reports-directory", "./bug_reports")
             cls.__instance.path_tmp_files_dir = paths.get("tmp-files-directory", "./tmp_generated_files")
@@ -46,6 +47,9 @@ class Config:
         style_and_type = style_name + ":" + key_suffix
         weight = self.style_weights.get(style_and_type, DEFAULT_STYLE_VALUE_WEIGHT)
         return _bound(0, 100000, weight)
+    
+    def getRules(self):
+        return self.rules
     
     def getVariants(self):
         return self.variants
