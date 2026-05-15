@@ -8,8 +8,8 @@ import os
 DEFAULT_RUN_SUMMARY_PATH = os.path.join(
     "bug_reports", "tester", "sort-repo", "run_summary.json"
 )
-BUG_COUNT_SNAPSHOT = 120
-RUNTIME_SECONDS_SNAPSHOT = 1968.045
+BUG_SNAPSHOT_INTERVAL = 10
+RUNTIME_SECONDS_SNAPSHOT_INTERVAL = 1000
 
 NUMERIC_SUMMARY_KEYS = {
     "tests_run",
@@ -78,18 +78,28 @@ def _write_summary_snapshot_once(payload, summary_path, snapshot_name):
 
 
 def _write_threshold_snapshots(payload, summary_path):
-    if payload.get("bugs_found", 0) >= BUG_COUNT_SNAPSHOT:
+    bugs_found = int(payload.get("bugs_found", 0) or 0)
+    max_bug_snapshot = (bugs_found // BUG_SNAPSHOT_INTERVAL) * BUG_SNAPSHOT_INTERVAL
+    for bug_count in range(BUG_SNAPSHOT_INTERVAL, max_bug_snapshot + 1, BUG_SNAPSHOT_INTERVAL):
         _write_summary_snapshot_once(
             payload,
             summary_path,
-            f"run_summary_{BUG_COUNT_SNAPSHOT}_bugs.json",
+            f"run_summary_{bug_count}_bugs.json",
         )
 
-    if payload.get("runtime_seconds", 0.0) >= RUNTIME_SECONDS_SNAPSHOT:
+    runtime_seconds = float(payload.get("runtime_seconds", 0.0) or 0.0)
+    max_runtime_snapshot = (
+        int(runtime_seconds) // RUNTIME_SECONDS_SNAPSHOT_INTERVAL
+    ) * RUNTIME_SECONDS_SNAPSHOT_INTERVAL
+    for runtime_second in range(
+        RUNTIME_SECONDS_SNAPSHOT_INTERVAL,
+        max_runtime_snapshot + 1,
+        RUNTIME_SECONDS_SNAPSHOT_INTERVAL,
+    ):
         _write_summary_snapshot_once(
             payload,
             summary_path,
-            f"run_summary_{RUNTIME_SECONDS_SNAPSHOT:.3f}s.json",
+            f"run_summary_{runtime_second}s.json",
         )
 
 
