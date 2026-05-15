@@ -71,8 +71,6 @@ function compareDimensions(dimensionsAfterModify, dimensionsAfterReload) {
     }
   })
   
-
-
   // Return structure
   // [{
   //   id: one

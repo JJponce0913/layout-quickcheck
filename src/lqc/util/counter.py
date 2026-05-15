@@ -1,6 +1,4 @@
 from time import time
-
-
 class Counter():
 
     def __init__(self, bug_limit=0, test_limit=0, crash_limit=1, feedback_interval=100):
