@@ -1,7 +1,7 @@
 
 import argparse
 import pickle
-from tooling.tree_merge import pickle_to_node_tree, walk_tree_verbose
+from lqc.rules.tree_merge import pickle_to_node_tree, walk_tree_verbose
 from lqc.generate.web_page.create import save_as_web_page
 
 """

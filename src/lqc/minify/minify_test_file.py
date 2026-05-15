@@ -3,7 +3,6 @@ import random
 from lqc.generate.css.util.length import matches_length_pattern
 from lqc.model.run_subject import RunSubject
 
-
 def elements(tree):
     for element in tree:
         if element["tag"] != "<text>":
@@ -12,16 +11,14 @@ def elements(tree):
 
 
 def Minify_RemoveEachElement(run_subject):
+
     for element in elements(run_subject.html_tree.tree):
-        element_id = element['id']
 
-        def removeElement(proposed_run_subject, element_id=element_id):
-            proposed_run_subject.removeElementById(element_id)
+        def removeElement(proposed_run_subject, element=element):
+            proposed_run_subject.removeElementById(element['id'])
             return proposed_run_subject
-        
+
         yield removeElement
-
-
 
 
 def Minify_RemoveAllStylesForEachElement(run_subject):
@@ -167,7 +164,7 @@ def Enhance_BackgroundColorPerElement(run_subject):
             else:
                 proposed_run_subject.base_styles.map[elementId] = {'background-color': background_color}
             return proposed_run_subject
- 
+
         yield giveMinSize
 
 
@@ -242,26 +239,18 @@ class MinifyStepFactory():
 
     def next_minimization_step(self, run_subject):
         manipulation = None
-        # Initialize the current generator if it has not been set yet
         if self.current_generator == None:
             self.current_generator = self.GENERATORS[self.current_generator_index](run_subject)
 
-        # Keep trying until we get a valid manipulation
         while manipulation == None:
             try:
-                # Attempt to get the next manipulation from the current generator
                 manipulation = next(self.current_generator)
-
             except StopIteration:
-                # If the current generator is exhausted, move to the next one
                 self.current_generator_index += 1
-                # If all generators are exhausted, signal that no more steps exist
                 if self.current_generator_index >= len(self.GENERATORS):
                     return None
-                # Initialize the next generator with the run_subject
                 self.current_generator = self.GENERATORS[self.current_generator_index](run_subject)
         
-        # Apply the manipulation to a deepcopy of run_subject and return it
         return manipulation(run_subject.deepcopy())
 
 

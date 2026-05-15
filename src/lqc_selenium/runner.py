@@ -25,7 +25,7 @@ from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from lqc_selenium.api import write_run_summary as write_run_summary_file
-from tooling.rule_engine import should_skip, sort_single_bug
+from lqc.rules.rule_engine import should_skip, sort_single_bug
 
 VERBOSE = False
 RUN_SUMMARY_ROOT = "bug_reports/tester/sort-repo"
@@ -259,8 +259,8 @@ def minify(target_browser, run_subject):
         safe_dir="bug_reports/safe",
         verbose=VERBOSE,
     )
-    sort_elapsed_seconds = time() - sort_started_at
-    print(f"Sorting time: {sort_elapsed_seconds:.2f}s")
+    sorting_elapsed_seconds = time() - sort_started_at
+    print(f"Sorting time: {sorting_elapsed_seconds:.2f}s")
     print(f"Matching rule folder: {path}")
     
     #Skipe minimization if shouldSkip is True
@@ -279,7 +279,6 @@ def minify(target_browser, run_subject):
             true_minification_elapsed_seconds,
         )
 
-    true_minify_started_at = time()
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
@@ -401,8 +400,8 @@ def find_bugs(counter):
                     path=path,
                     shouldSkip=shouldSkip,
                     rule_name=rule_name,
-                    sorting_seconds=sorting_seconds,
-                    true_minification_seconds=true_minification_seconds,
+                    sorting_seconds=sorting_elapsed_seconds,
+                    true_minification_seconds=true_minification_elapsed_seconds,
                 )
 
             # False Positive Detection
@@ -428,8 +427,8 @@ def find_bugs(counter):
                     path=path,
                     shouldSkip=shouldSkip,
                     rule_name=rule_name,
-                    sorting_seconds=sorting_seconds,
-                    true_minification_seconds=true_minification_seconds,
+                    sorting_seconds=sorting_elapsed_seconds,
+                    true_minification_seconds=true_minification_elapsed_seconds,
                 )
                 print(f"Bug report saved: {url}")
 

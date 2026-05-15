@@ -10,7 +10,9 @@ def copyExternalJSFiles(folder):
 
 def saveTestSubjectAsWebPage(run_subject):
     file_config = FileConfig()
-    folder, filepath, filename = file_config.getTimestampFilePath()
+    layout_folder_name = os.path.basename(file_config.layout_file_dir)
+    folder = file_config.getCustomTimestampPath(layout_folder_name)
+    filepath = os.path.join(folder, "test-file.html")
     copyExternalJSFiles(folder)
     save_as_web_page(run_subject, filepath)
     url = "file://" + os.path.abspath(filepath)

@@ -18,6 +18,7 @@ class RunResultPass(RunResult):
     def isBug(self):
         return False
 
+
 class RunResultCrash(RunResult):
 
     def __init__(self):

@@ -10,7 +10,7 @@ import time
 import json
 from contextlib import redirect_stdout
 
-from tooling.tree_merge import run_subject_to_node_tree, merge_trees, walk_tree_verbose
+from lqc.rules.tree_merge import run_subject_to_node_tree, merge_trees, walk_tree_verbose
 
 
 def load_tree_start_pairs(folder_path):
@@ -30,7 +30,6 @@ def load_tree_start_pairs(folder_path):
             except Exception:
                 continue
     return pairs
-
 
 def check_all_pkls(folder_path, rules, verbose=False):
     results = []
@@ -668,8 +667,6 @@ def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
             ok, ids = _match_sequence_exact_wild(kids[i : i + m], pat, include_text=include_text)
             if ok:
                 yield ids
-
-
 
 def should_skip(run_subject, rules, verbose=False):
     tree, _ = run_subject_to_node_tree(run_subject)

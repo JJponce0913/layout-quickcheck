@@ -10,11 +10,8 @@ class FileConfig:
     bug_report_file_dir: str
     layout_file_dir: str
 
-
     def __init__(self):
         config = Config()
-        cwd = os.getcwd()
-        cwd = cwd.replace("\\", "/")
         self.bug_report_file_dir = config.getBugReportDirectory()
         self.layout_file_dir = config.getTmpFilesDirectory()
 
@@ -23,25 +20,33 @@ class FileConfig:
         if not os.path.exists(self.bug_report_file_dir):
             os.makedirs(self.bug_report_file_dir)
 
-
     def getTimestampFilePath(self):
         timestamp = datetime.now()
         formatted_timestamp = timestamp.strftime(timestamp_format)
-        filename = f'test-file-{formatted_timestamp}.html'
+        filename = f"test-file-{formatted_timestamp}.html"
         filepath = os.path.join(self.layout_file_dir, filename)
         return self.layout_file_dir, filepath, filename
-    
+
+    def getCustomTimestampPath(self, custom_folder: str):
+        timestamp = datetime.now()
+        formatted_timestamp = timestamp.strftime(timestamp_format)
+        custom_dir = os.path.join(self.layout_file_dir, custom_folder)
+        if not os.path.exists(custom_dir):
+            os.makedirs(custom_dir)
+        dirpath = os.path.join(custom_dir, f"{custom_folder}-{formatted_timestamp}")
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+        return dirpath
+
     def getCustomTimestampBugReport(self, custom_folder: str):
         timestamp = datetime.now()
         formatted_timestamp = timestamp.strftime(timestamp_format)
         custom_dir = os.path.join(self.bug_report_file_dir, custom_folder)
         if not os.path.exists(custom_dir):
             os.makedirs(custom_dir)
-        bug_folder = os.path.join(custom_dir, f"bug-{formatted_timestamp}")
-        return bug_folder
-    
+        return os.path.join(custom_dir, f"bug-{formatted_timestamp}")
+
     def getTimestampBugReport(self):
         timestamp = datetime.now()
         formatted_timestamp = timestamp.strftime(timestamp_format)
-        bug_folder = os.path.join(self.bug_report_file_dir, f"bug-report-{formatted_timestamp}")
-        return bug_folder
+        return os.path.join(self.bug_report_file_dir, f"bug-report-{formatted_timestamp}")

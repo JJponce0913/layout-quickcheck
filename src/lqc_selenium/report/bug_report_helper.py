@@ -21,8 +21,7 @@ def save_bug_report(
     shouldSkip
 ):
     file_config = FileConfig()
-
-    bug_folder = file_config.getCustomTimestampBugReport("bug_report")
+    bug_folder, _ = file_config.getCustomTimestampBugReport("bug_report")
 
     # Create a folder to hold all the bug report files
     os.mkdir(bug_folder)

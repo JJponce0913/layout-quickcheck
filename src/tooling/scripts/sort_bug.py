@@ -44,8 +44,8 @@ SRC_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from tooling.tree_merge import run_subject_to_node_tree, merge_trees, walk_tree_verbose
-from tooling.rule_engine import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles
+from lqc.rules.tree_merge import run_subject_to_node_tree, merge_trees, walk_tree_verbose
+from lqc.rules.rule_engine import check_all_pkls, create_rule, extract_tag_tree, get_base_styles, get_modified_styles
 from lqc.generate.web_page.create import save_as_web_page
 
 
