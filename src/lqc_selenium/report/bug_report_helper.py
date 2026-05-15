@@ -9,7 +9,7 @@ from lqc.generate.web_page.run_subject_converter import copyExternalJSFiles
 from lqc.model.constants import BugType
 from lqc.model.run_result import RunResult, RunResultLayoutBug
 from lqc.model.run_subject import RunSubject
-from tooling.rule_engine import dissolve_bug_group, recompute_bug_group_artifacts
+from lqc.rules.rule_engine import dissolve_bug_group, recompute_bug_group_artifacts
 
 
 def save_bug_report(
@@ -21,7 +21,7 @@ def save_bug_report(
     shouldSkip
 ):
     file_config = FileConfig()
-    bug_folder, _ = file_config.getCustomTimestampBugReport("bug_report")
+    bug_folder = file_config.getCustomTimestampBugReport("bug_report")
 
     # Create a folder to hold all the bug report files
     os.mkdir(bug_folder)
