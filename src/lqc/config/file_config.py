@@ -20,7 +20,7 @@ class FileConfig:
             os.makedirs(self.layout_file_dir)
         if not os.path.exists(self.bug_report_file_dir):
             os.makedirs(self.bug_report_file_dir)
-
+            
     def getCustomTimestampPath(self, custom_folder: str):
             timestamp = datetime.now()
             formatted_timestamp = timestamp.strftime(timestamp_format)
