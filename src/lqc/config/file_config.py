@@ -13,8 +13,6 @@ class FileConfig:
 
     def __init__(self):
         config = Config()
-        cwd = os.getcwd()
-        cwd = cwd.replace("\\", "/")
         self.bug_report_file_dir = config.getBugReportDirectory()
         self.layout_file_dir = config.getTmpFilesDirectory()
 
