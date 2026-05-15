@@ -252,14 +252,15 @@ def extract_bug_group_rules_to_json(
 
 def minify(target_browser, run_subject):
     prerun_subject = run_subject
-    sorting_started_at = time()
+    sort_started_at = time()
     path,shouldSkip,rule_name = sort_single_bug(
         base_dir="bug_reports/tester/sort-repo",
         run_subject=run_subject,
         safe_dir="bug_reports/safe",
         verbose=VERBOSE,
     )
-    sorting_elapsed_seconds = time() - sorting_started_at
+    sort_elapsed_seconds = time() - sort_started_at
+    print(f"Sorting time: {sort_elapsed_seconds:.2f}s")
     print(f"Matching rule folder: {path}")
     
     #Skipe minimization if shouldSkip is True
@@ -278,6 +279,7 @@ def minify(target_browser, run_subject):
             true_minification_elapsed_seconds,
         )
 
+    true_minify_started_at = time()
     stepsFactory = MinifyStepFactory()
 
     # Keep applying minimization steps until no more are available
@@ -398,7 +400,9 @@ def find_bugs(counter):
                     prerun_subject=prerun_subject,
                     path=path,
                     shouldSkip=shouldSkip,
-                    rule_name=rule_name
+                    rule_name=rule_name,
+                    sorting_seconds=sorting_seconds,
+                    true_minification_seconds=true_minification_seconds,
                 )
 
             # False Positive Detection
@@ -424,6 +428,8 @@ def find_bugs(counter):
                     path=path,
                     shouldSkip=shouldSkip,
                     rule_name=rule_name,
+                    sorting_seconds=sorting_seconds,
+                    true_minification_seconds=true_minification_seconds,
                 )
                 print(f"Bug report saved: {url}")
 

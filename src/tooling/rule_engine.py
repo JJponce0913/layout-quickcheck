@@ -225,10 +225,8 @@ def recompute_bug_group_artifacts(group_dir):
     )
 
     if rule.get("rule_class", {}).get("modified_style") == []:
-        tree_pickle_path = os.path.join(group_dir, "tree.pkl")
-        tree_html_path = os.path.join(group_dir, "tree.html")
-        extracted_rule_path = os.path.join(group_dir, "extracted_rule.json")
-        for artifact_path in (tree_pickle_path, tree_html_path, extracted_rule_path):
+        for artifact_name in ("tree.pkl", "tree.html", "extracted_rule.json"):
+            artifact_path = os.path.join(group_dir, artifact_name)
             if os.path.exists(artifact_path):
                 os.remove(artifact_path)
         return None
@@ -246,6 +244,47 @@ def recompute_bug_group_artifacts(group_dir):
         json.dump(rule, f, indent=2)
 
     return rule
+
+
+def _unique_child_path(parent_dir, name):
+    candidate = os.path.join(parent_dir, name)
+    if not os.path.exists(candidate):
+        return candidate
+
+    while True:
+        suffix = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')}-{random.randint(1000,9999)}"
+        candidate = os.path.join(parent_dir, f"{name}-{suffix}")
+        if not os.path.exists(candidate):
+            return candidate
+
+
+def dissolve_bug_group(group_dir):
+    parent_dir = os.path.dirname(os.path.normpath(group_dir))
+    moved_paths = {}
+
+    for name in os.listdir(group_dir):
+        if not name.startswith("bug-") or name.startswith("bug-group-"):
+            continue
+
+        old_path = os.path.join(group_dir, name)
+        if not os.path.isdir(old_path):
+            continue
+
+        new_path = _unique_child_path(parent_dir, name)
+        shutil.move(old_path, new_path)
+        moved_paths[os.path.abspath(old_path)] = os.path.abspath(new_path)
+
+    for artifact_name in ("tree.pkl", "tree.html", "extracted_rule.json"):
+        artifact_path = os.path.join(group_dir, artifact_name)
+        if os.path.exists(artifact_path):
+            os.remove(artifact_path)
+
+    try:
+        os.rmdir(group_dir)
+    except OSError:
+        pass
+
+    return moved_paths
 
 
 def node_to_ordered_tokens(root, include_text=True):
