@@ -1,7 +1,7 @@
 import json
 import os
-import pickle
 import shutil
+import pickle
 from datetime import datetime
 from lqc.config.file_config import FileConfig
 from lqc.generate.web_page.create import save_as_web_page
@@ -24,7 +24,8 @@ def save_bug_report(
     sorting_seconds=None,
     true_minification_seconds=None,
 ):
-    report_run_subject = minified_run_subject or prerun_subject
+    if minified_run_subject is None:
+        minified_run_subject = prerun_subject
 
     if path is None:
         bug_folder = FileConfig().getCustomTimestampPath()
@@ -54,19 +55,19 @@ def save_bug_report(
 
     minified_bug = os.path.join(bug_folder, "minified_bug.html")
     print(f"Saving minimized bug to {minified_bug}")
-    save_as_web_page(report_run_subject, minified_bug, run_result=run_result)
+    save_as_web_page(minified_run_subject, minified_bug, run_result=run_result)
     copyExternalJSFiles(bug_folder)
 
-    styles_used = list(report_run_subject.all_style_names())
+    styles_used = list(minified_run_subject.all_style_names())
     styles_used.sort()
     styles_used_string = ",".join(styles_used)
-    base_styles = list(report_run_subject.base_styles.all_style_names())
-    modified_styles = list(report_run_subject.modified_styles.all_style_names())
+    base_styles = list(minified_run_subject.base_styles.all_style_names())
+    modified_styles = list(minified_run_subject.modified_styles.all_style_names())
     bug_type = "Page Crash" if run_result.type == BugType.PAGE_CRASH else "Under Invalidation"
 
     pickle_addr = os.path.join(bug_folder, "minified_run_subject.pkl")
     with open(pickle_addr, "wb") as f:
-        pickle.dump(report_run_subject, f)
+        pickle.dump(minified_run_subject, f)
 
     prerun_subject_addr = os.path.join(bug_folder, "run_subject_prerun.pkl")
     with open(prerun_subject_addr, "wb") as f:
@@ -80,7 +81,7 @@ def save_bug_report(
         "base_styles": base_styles,
         "modified_styles": modified_styles,
         "variants": variants,
-        "minified_run_subject": report_run_subject,
+        "minified_run_subject": minified_run_subject,
         "prerun_subject": prerun_subject,
         "pickle_addr": pickle_addr,
         "shouldSkip": shouldSkip,
