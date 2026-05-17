@@ -11,8 +11,8 @@ from lqc_selenium.runner import extract_bug_group_rules_to_json
 
 
 DEFAULT_CONFIG_FILE = "./config/change.json"
-DEFAULT_SOURCE_ROOT = "bug_reports/tester/sort-repo"
-DEFAULT_OUTPUT_JSON = "bug_reports/sort-repo/rules.json"
+DEFAULT_SOURCE_ROOT = "bug_reports/tester"
+DEFAULT_OUTPUT_JSON = "bug_reports/tester/rules.json"
 
 
 def main():

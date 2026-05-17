@@ -1,4 +1,5 @@
 import os
+import uuid
 from shutil import copy2
 from lqc.config.file_config import FileConfig
 from lqc.generate.web_page.create import save_as_web_page
@@ -10,9 +11,9 @@ def copyExternalJSFiles(folder):
 
 def saveTestSubjectAsWebPage(run_subject):
     file_config = FileConfig()
-    layout_folder_name = os.path.basename(file_config.layout_file_dir)
-    folder = file_config.getCustomTimestampPath(layout_folder_name)
-    filepath = os.path.join(folder, "test-file.html")
+    folder = file_config.layout_file_dir
+    os.makedirs(folder, exist_ok=True)
+    filepath = os.path.join(folder, f"test-file-{uuid.uuid4().hex}.html")
     copyExternalJSFiles(folder)
     save_as_web_page(run_subject, filepath)
     url = "file://" + os.path.abspath(filepath)

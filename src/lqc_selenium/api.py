@@ -6,7 +6,7 @@ import os
 
 
 DEFAULT_RUN_SUMMARY_PATH = os.path.join(
-    "bug_reports", "tester", "sort-repo", "run_summary.json"
+    "bug_reports", "tester", "run_summary.json"
 )
 BUG_SNAPSHOT_INTERVAL = 10
 RUNTIME_SECONDS_SNAPSHOT_INTERVAL = 1000

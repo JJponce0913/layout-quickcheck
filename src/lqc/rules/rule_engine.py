@@ -31,40 +31,7 @@ def load_tree_start_pairs(folder_path):
                 continue
     return pairs
 
-def check_all_pkls(folder_path, rules, verbose=False):
-    results = []
-    folder_name = os.path.basename(os.path.normpath(folder_path))
 
-    for root, _, files in os.walk(folder_path):
-        for name in files:
-            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "run_subject.pkl" in name):
-                continue
-
-            pkl_path = os.path.join(root, name)
-            try:
-                with open(pkl_path, "rb") as f:
-                    run_subject = pickle.load(f)
-
-                matched = should_skip(run_subject, rules, verbose=verbose)
-                if verbose:
-                    print(f"[{folder_name}] {name}: {matched}")
-                results.append((pkl_path, matched))
-
-            except Exception as e:
-                if verbose:
-                    print(f"[{folder_name}] {name}: ERROR {e}")
-                results.append((pkl_path, f"ERROR: {e}"))
-
-    true_count = 0
-    false_count = 0
-    for _, r in results:
-        matched = r[0] if isinstance(r, tuple) else r
-        if matched is True:
-            true_count += 1
-        else:
-            false_count += 1
-
-    return results, true_count, false_count
 
 
 
@@ -667,6 +634,40 @@ def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
             ok, ids = _match_sequence_exact_wild(kids[i : i + m], pat, include_text=include_text)
             if ok:
                 yield ids
+def check_all_pkls(folder_path, rules, verbose=False):
+    results = []
+    folder_name = os.path.basename(os.path.normpath(folder_path))
+
+    for root, _, files in os.walk(folder_path):
+        for name in files:
+            if not (name.endswith("run_subject_prerun.pkl") or "safe" in name or "run_subject.pkl" in name):
+                continue
+
+            pkl_path = os.path.join(root, name)
+            try:
+                with open(pkl_path, "rb") as f:
+                    run_subject = pickle.load(f)
+
+                matched, rule_name = should_skip(run_subject, rules, verbose=verbose)
+                if verbose:
+                    print(f"[{folder_name}] {name}: matched={matched}, rule_name={rule_name}")
+                results.append((pkl_path, matched))
+
+            except Exception as e:
+                if verbose:
+                    print(f"[{folder_name}] {name}: ERROR {e}")
+                results.append((pkl_path, f"ERROR: {e}"))
+
+    true_count = 0
+    false_count = 0
+    for _, r in results:
+        matched = r[0] if isinstance(r, tuple) else r
+        if matched is True:
+            true_count += 1
+        else:
+            false_count += 1
+
+    return results, true_count, false_count
 
 def should_skip(run_subject, rules, verbose=False):
     tree, _ = run_subject_to_node_tree(run_subject)
@@ -820,7 +821,7 @@ def sort_single_bug(base_dir, run_subject, safe_dir, verbose=False):
         _, true_safe, _ = check_all_pkls(safe_dir, [rule], verbose=verbose)
         log(f"[sort_single_bug] single_bug_counts true_safe={true_safe}")
 
-        if true_safe <10:
+        if true_safe == 0:
             # Do not create a new group unless the final merged artifacts are valid.
             new_folder_name = f"bug-group-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
             new_group_path = os.path.join(base_dir, new_folder_name)

@@ -1,37 +1,39 @@
 #!/usr/bin/env python3
 
 import argparse
-import ast
-from contextlib import redirect_stdout
 from datetime import datetime
-import io
 import json
 import os
 import pickle
-import re
 import sys
 from time import time
 import traceback
 
 from lqc.config.config import Config, parse_config
+from lqc.config.file_config import FileConfig
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
-from lqc.generate.web_page.create import save_as_web_page
 from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.constants import BugType
 from lqc.util.counter import Counter
-from lqc_selenium.report.bug_report_helper import save_bug_report, save_bug_report_custom
+from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
 from lqc_selenium.api import write_run_summary as write_run_summary_file
-from lqc.rules.rule_engine import should_skip, sort_single_bug
+from lqc.rules.rule_engine import sort_single_bug
 
 VERBOSE = False
-RUN_SUMMARY_ROOT = "bug_reports/tester/sort-repo"
 
 
-def write_run_summary(counter, target_root=RUN_SUMMARY_ROOT):
+def get_sort_repo_dir():
+    return FileConfig().bug_report_file_dir
+
+
+def write_run_summary(counter, target_root=None):
+    if target_root is None:
+        target_root = get_sort_repo_dir()
+
     os.makedirs(target_root, exist_ok=True)
 
     group_dirs = []
@@ -79,130 +81,15 @@ def write_run_summary(counter, target_root=RUN_SUMMARY_ROOT):
     return summary_path
 
 
-def _ensure_dir(d):
-    if not os.path.isdir(d):
-        os.makedirs(d, exist_ok=True)
-
-def _next_html_index(d):
-    _ensure_dir(d)
-    nums = []
-    pat = re.compile(r"^(\d+)\.html$")
-    for f in os.listdir(d):
-        m = pat.match(f)
-        if m:
-            nums.append(int(m.group(1)))
-    return (max(nums) + 1) if nums else 0
-
-def _save_step_html(run_subject, folder, idx):
-    path = os.path.join(folder, f"{idx:06d}.html")
-    save_as_web_page(run_subject, path)
-    return idx + 1
-
-def minify_debug(target_browser, run_subject):
-    folder = "tmp_generated_files/debug"
-    idx = _next_html_index(folder)
-    pickle_addr = f"{folder}/pre.pkl"
-    with open(pickle_addr, "wb") as f:
-        pickle.dump(run_subject, f)
-
-    print(f"STEP {idx:06d} PRE")
-    idx = _save_step_html(run_subject, folder, idx)
-    print("Minifying...")
-    stepsFactory = MinifyStepFactory()
-    while True:
-        proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
-        if proposed_run_subject is None:
-            break
-        print(f"STEP {idx:06d} PROPOSED")
-        idx = _save_step_html(proposed_run_subject, folder, idx)
-        run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
-        state = "BUG" if run_result.isBug() else "PASS"
-        print(f"STEP {idx-1:06d} RESULT {state}")
-        if run_result.isBug():
-            run_subject = proposed_run_subject
-            print(f"STEP {idx:06d} ACCEPTED")
-            idx = _save_step_html(run_subject, folder, idx)
-        else:
-            print(f"STEP {idx:06d} REJECTED")
-    run_result, _ = test_combination(target_browser.getDriver(), run_subject)
-    print(f"STEP {idx:06d} FINAL")
-    idx = _save_step_html(run_subject, folder, idx)
-    print("Minifying done.")
-    return (run_subject, run_result, pickle_addr)
-
-def visible_contents(parent):
-    out = []
-    for c in parent.contents:
-        if isinstance(c, str):
-            if c.strip():
-                out.append(c)
-        else:
-            out.append(c)
-    return out
-
-def node_matches(node, spec):
-    if spec == "text":
-        return isinstance(node, str) and bool(node.strip())
-    if isinstance(spec, str):
-        return getattr(node, "name", None) == spec
-    if isinstance(spec, dict):
-        tag = spec.get("tag")
-        attrs = spec.get("attrs", {})
-        if tag and getattr(node, "name", None) != tag:
-            return False
-        for k, v in attrs.items():
-            if node.get(k) != v:
-                return False
-        return True
-    return False
-
-
-def _extract_generated_rules_from_text(content):
-    rules = []
-    marker = "Generated Rule:"
-    start = 0
-
-    while True:
-        marker_idx = content.find(marker, start)
-        if marker_idx == -1:
-            break
-
-        tail = content[marker_idx + len(marker):].lstrip()
-        if not tail.startswith("{"):
-            start = marker_idx + len(marker)
-            continue
-
-        depth = 0
-        end_idx = None
-        for i, ch in enumerate(tail):
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    end_idx = i + 1
-                    break
-
-        if end_idx is None:
-            start = marker_idx + len(marker)
-            continue
-
-        try:
-            parsed = ast.literal_eval(tail[:end_idx])
-            if isinstance(parsed, dict):
-                rules.append(parsed)
-        except (SyntaxError, ValueError):
-            pass
-
-        start = marker_idx + len(marker)
-
-    return rules
-
-
 def extract_bug_group_rules_to_json(
-    source_root="bug_reports/sort-repo",
-    output_json_path="bug_reports/sort-repo/rules.json",
+    source_root=None,
+    output_json_path=None,
 ):
+    if source_root is None:
+        source_root = get_sort_repo_dir()
+    if output_json_path is None:
+        output_json_path = os.path.join(source_root, "rules.json")
+
     print(f"Extracting rules from {source_root} to {output_json_path}...")
     all_rules = []
     bug_group_folder_count = 0
@@ -254,7 +141,7 @@ def minify(target_browser, run_subject):
     prerun_subject = run_subject
     sort_started_at = time()
     path,shouldSkip,rule_name = sort_single_bug(
-        base_dir="bug_reports/tester/sort-repo",
+        base_dir=get_sort_repo_dir(),
         run_subject=run_subject,
         safe_dir="bug_reports/safe",
         verbose=VERBOSE,
@@ -391,7 +278,7 @@ def find_bugs(counter):
             print(f"Rule name: {rule_name}")
             # Save bug report that matches a rule 
             if shouldSkip:
-                save_bug_report_custom(
+                save_bug_report(
                     variants=[],
                     minified_run_subject=None,
                     run_result=minified_run_result,
@@ -418,7 +305,7 @@ def find_bugs(counter):
                 # Stage 3 - Test Variants
                 variants = test_variants(minified_run_subject)
                 
-                url = save_bug_report_custom(
+                url = save_bug_report(
                     variants,
                     minified_run_subject,
                     minified_run_result,
@@ -442,7 +329,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
+DEFAULT_CONFIG_FILE = "./config/change.json"
 
 if __name__ == "__main__":
 
