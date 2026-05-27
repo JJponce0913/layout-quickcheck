@@ -7,7 +7,7 @@ if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
 from lqc.config.config import Config, parse_config
-from lqc_selenium.runner import extract_bug_group_rules_to_json
+from lqc_selenium.api import extract_bug_group_rules_to_json
 
 
 DEFAULT_CONFIG_FILE = "./config/change.json"

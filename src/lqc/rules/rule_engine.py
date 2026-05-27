@@ -629,6 +629,7 @@ def _iter_pattern_hits_wild(tree_root, pat, include_text=True):
             ok, ids = _match_sequence_exact_wild(kids[i : i + m], pat, include_text=include_text)
             if ok:
                 yield ids
+
 def check_all_pkls(folder_path, rules):
     results = []
 
@@ -650,8 +651,7 @@ def check_all_pkls(folder_path, rules):
 
     true_count = 0
     false_count = 0
-    for _, r in results:
-        matched = r[0] if isinstance(r, tuple) else r
+    for _, matched in results:
         if matched is True:
             true_count += 1
         else:
@@ -671,14 +671,14 @@ def should_skip(run_subject, rules):
         modified_styles = rule.get("rule_class", {}).get("modified_style", [])
 
         style_ids = id_with_styles(styles_list, base_styles, modified_styles)
+
         html_match = follow_html_and_style_pattern(style_ids, mapping, html_pat, tree)
 
         if html_match:
             return True, rule.get("name", "unknown")
 
-    return False, None
+    return False,None
 
-    
 def sort_single_bug(base_dir, run_subject, safe_dir):
     """
     Args:
@@ -690,7 +690,7 @@ def sort_single_bug(base_dir, run_subject, safe_dir):
     Returns:
         A tuple of `(path, shouldSkip, rule_name)`.
     """
-    tree, startnode = run_subject_to_node_tree(run_subject)
+    _, startnode = run_subject_to_node_tree(run_subject)
 
     if startnode is None:
         new_unknown = f"bug-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
@@ -778,5 +778,4 @@ def sort_single_bug(base_dir, run_subject, safe_dir):
     # If no safe grouping is possible, keep the bug as a standalone instance.
     new_unknown = f"bug-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}"
     return os.path.join(base_dir, new_unknown), False, None
-
 

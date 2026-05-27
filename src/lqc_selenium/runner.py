@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-from datetime import datetime
-import json
 import os
 import pickle
 import sys
 from time import time
 import traceback
-
 from lqc.config.config import Config, parse_config
-from lqc.config.file_config import FileConfig
 from lqc.generate.html_file_generator import remove_file
 from lqc.generate.style_log_generator import generate_run_subject
 from lqc.minify.minify_test_file import MinifyStepFactory
@@ -20,119 +16,8 @@ from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from lqc_selenium.api import write_run_summary as write_run_summary_file
+from lqc_selenium.api import get_sort_repo_dir, write_counter_run_summary as write_run_summary
 from lqc.rules.rule_engine import sort_single_bug
-
-
-def get_sort_repo_dir():
-    return FileConfig().bug_report_file_dir
-
-
-def write_run_summary(counter, target_root=None):
-    if target_root is None:
-        target_root = get_sort_repo_dir()
-
-    os.makedirs(target_root, exist_ok=True)
-
-    group_dirs = []
-    single_bug_dirs = []
-    grouped_bug_instances = 0
-
-    for entry in os.listdir(target_root):
-        entry_path = os.path.join(target_root, entry)
-        if not os.path.isdir(entry_path):
-            continue
-
-        if entry.startswith("bug-group-"):
-            group_dirs.append(entry)
-            grouped_bug_instances += sum(
-                1
-                for child in os.listdir(entry_path)
-                if os.path.isdir(os.path.join(entry_path, child)) and child.startswith("bug-")
-            )
-        elif entry.startswith("bug-"):
-            single_bug_dirs.append(entry)
-
-    summary = {
-        "updated_at": datetime.now().isoformat(),
-        "target_root": os.path.abspath(target_root),
-        "tests_run": counter.num_tests,
-        "passed": counter.num_successful,
-        "bugs_found": counter.num_error,
-        "cant_reproduce": counter.num_cant_reproduce,
-        "bugs_with_no_modified_styles": counter.num_no_mod_styles_bugs,
-        "crashes": counter.num_crash,
-        "bug_group_count": len(group_dirs),
-        "single_bug_count": len(single_bug_dirs),
-        "grouped_bug_instance_count": grouped_bug_instances,
-        "total_bug_directories": len(single_bug_dirs) + grouped_bug_instances,
-        "bug_groups": sorted(group_dirs),
-        "single_bugs": sorted(single_bug_dirs),
-        "runtime_seconds": round(counter.getRuntimeSeconds(), 3),
-        "minify_seconds": round(counter.total_minify_seconds, 3),
-        "sorting_seconds": round(counter.total_sorting_seconds, 3),
-        "true_minification_seconds": round(counter.total_true_minification_seconds, 3),
-    }
-
-    summary_path = os.path.join(target_root, "run_summary.json")
-    write_run_summary_file(summary, summary_path=summary_path)
-    return summary_path
-
-
-def extract_bug_group_rules_to_json(
-    source_root=None,
-    output_json_path=None,
-):
-    if source_root is None:
-        source_root = get_sort_repo_dir()
-    if output_json_path is None:
-        output_json_path = os.path.join(source_root, "rules.json")
-
-    print(f"Extracting rules from {source_root} to {output_json_path}...")
-    all_rules = []
-    bug_group_folder_count = 0
-
-    if not os.path.isdir(source_root):
-        os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
-        with open(output_json_path, "w", encoding="utf-8") as f:
-            json.dump({"rules": []}, f, indent=2)
-        print("Found 0 bug-group folders.")
-        return output_json_path, all_rules
-
-    for root, _, files in os.walk(source_root):
-        group_name = os.path.basename(root)
-        if not group_name.startswith("bug-group-"):
-            continue
-        bug_group_folder_count += 1
-
-        if "extracted_rule.json" not in files:
-            continue
-
-        extracted_rule_path = os.path.join(root, "extracted_rule.json")
-        try:
-            with open(extracted_rule_path, "r", encoding="utf-8") as f:
-                rule = json.load(f)
-        except OSError:
-            continue
-        except json.JSONDecodeError:
-            continue
-
-        all_rules.append(
-            {
-                "bug_group": os.path.relpath(root, source_root),
-                "merged_tree_path": extracted_rule_path.replace("\\", "/"),
-                "rule": rule,
-            }
-        )
-
-    os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
-    with open(output_json_path, "w", encoding="utf-8") as f:
-        json.dump({"rules": all_rules}, f, indent=2)
-
-    print(f"Found {bug_group_folder_count} bug-group folders.")
-    return output_json_path, [entry["rule"] for entry in all_rules]
-
-
 
 
 def minify(target_browser, run_subject):
@@ -147,7 +32,7 @@ def minify(target_browser, run_subject):
     print(f"Sorting time: {sorting_elapsed_seconds:.2f}s")
     print(f"Matching rule folder: {path}")
     
-    #Skipe minimization if shouldSkip is True
+    #Skip minimization if shouldSkip is True
     if shouldSkip:
         true_minification_started_at = time()
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
@@ -176,11 +61,11 @@ def minify(target_browser, run_subject):
         
         # Test the proposed minimized subject in the target browser
         run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
-
         # If the minimized subject still triggers the bug, accept it as the new subject
         if run_result.isBug():
             run_subject = proposed_run_subject
 
+    # Create final representations of minified files
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     true_minification_elapsed_seconds = time() - true_minification_started_at
     return (
@@ -193,7 +78,6 @@ def minify(target_browser, run_subject):
         sorting_elapsed_seconds,
         true_minification_elapsed_seconds,
     )
-
 
 
 def find_bugs(counter):
@@ -239,6 +123,7 @@ def find_bugs(counter):
 
         if not run_result.isBug():
             counter.incSuccess()
+
         else:
             # Stage 2 - Minifying Bug
             print("Bug found. Minifying...")
@@ -289,10 +174,10 @@ def find_bugs(counter):
 
             # False Positive Detection
             if not minified_run_result.isBug():
-                print("Skipped: no repro after minify.")
+                print("False positive (could not reproduce)")
                 counter.incNoRepro()
             elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
-                print("Skipped: no modified styles after minify.")
+                print("False positive (no modified styles)")
                 counter.incNoMod()
 
             else:
@@ -300,7 +185,7 @@ def find_bugs(counter):
 
                 # Stage 3 - Test Variants
                 variants = test_variants(minified_run_subject)
-                
+
                 url = save_bug_report(
                     variants,
                     minified_run_subject,
@@ -325,7 +210,7 @@ def find_bugs(counter):
         remove_file(test_filepath)
 
 
-DEFAULT_CONFIG_FILE = "./config/change.json"
+DEFAULT_CONFIG_FILE = "./config/preset-default.config.json"
 
 if __name__ == "__main__":
 
@@ -335,7 +220,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--crash-limit", help="quit after crashing this many times", type=int, default=1)
     parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
     args = parser.parse_args()
-    
+
     # Initialize Config
     print(f"Using config file {args.config_file}")
     conf = parse_config(args.config_file)
@@ -367,4 +252,5 @@ if __name__ == "__main__":
         for exc in counter.crash_exceptions:
             traceback.print_exception(exc["etype"], exc["value"], exc["traceback"])
             print("-"*60 + "\n")
+
 

@@ -4,6 +4,8 @@ from datetime import datetime
 import json
 import os
 
+from lqc.config.file_config import FileConfig
+
 
 DEFAULT_RUN_SUMMARY_PATH = os.path.join(
     "bug_reports", "tester", "run_summary.json"
@@ -115,6 +117,115 @@ def write_run_summary(summary, summary_path=DEFAULT_RUN_SUMMARY_PATH):
     _write_threshold_snapshots(payload, summary_path)
 
     return summary_path
+
+
+def get_sort_repo_dir():
+    return FileConfig().bug_report_file_dir
+
+
+def write_counter_run_summary(counter, target_root=None):
+    if target_root is None:
+        target_root = get_sort_repo_dir()
+
+    os.makedirs(target_root, exist_ok=True)
+
+    group_dirs = []
+    single_bug_dirs = []
+    grouped_bug_instances = 0
+
+    for entry in os.listdir(target_root):
+        entry_path = os.path.join(target_root, entry)
+        if not os.path.isdir(entry_path):
+            continue
+
+        if entry.startswith("bug-group-"):
+            group_dirs.append(entry)
+            grouped_bug_instances += sum(
+                1
+                for child in os.listdir(entry_path)
+                if os.path.isdir(os.path.join(entry_path, child)) and child.startswith("bug-")
+            )
+        elif entry.startswith("bug-"):
+            single_bug_dirs.append(entry)
+
+    summary = {
+        "updated_at": datetime.now().isoformat(),
+        "target_root": os.path.abspath(target_root),
+        "tests_run": counter.num_tests,
+        "passed": counter.num_successful,
+        "bugs_found": counter.num_error,
+        "cant_reproduce": counter.num_cant_reproduce,
+        "bugs_with_no_modified_styles": counter.num_no_mod_styles_bugs,
+        "crashes": counter.num_crash,
+        "bug_group_count": len(group_dirs),
+        "single_bug_count": len(single_bug_dirs),
+        "grouped_bug_instance_count": grouped_bug_instances,
+        "total_bug_directories": len(single_bug_dirs) + grouped_bug_instances,
+        "bug_groups": sorted(group_dirs),
+        "single_bugs": sorted(single_bug_dirs),
+        "runtime_seconds": round(counter.getRuntimeSeconds(), 3),
+        "minify_seconds": round(counter.total_minify_seconds, 3),
+        "sorting_seconds": round(counter.total_sorting_seconds, 3),
+        "true_minification_seconds": round(counter.total_true_minification_seconds, 3),
+    }
+
+    summary_path = os.path.join(target_root, "run_summary.json")
+    write_run_summary(summary, summary_path=summary_path)
+    return summary_path
+
+
+def extract_bug_group_rules_to_json(
+    source_root=None,
+    output_json_path=None,
+):
+    if source_root is None:
+        source_root = get_sort_repo_dir()
+    if output_json_path is None:
+        output_json_path = os.path.join(source_root, "rules.json")
+
+    print(f"Extracting rules from {source_root} to {output_json_path}...")
+    all_rules = []
+    bug_group_folder_count = 0
+
+    if not os.path.isdir(source_root):
+        os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
+        with open(output_json_path, "w", encoding="utf-8") as f:
+            json.dump({"rules": []}, f, indent=2)
+        print("Found 0 bug-group folders.")
+        return output_json_path, all_rules
+
+    for root, _, files in os.walk(source_root):
+        group_name = os.path.basename(root)
+        if not group_name.startswith("bug-group-"):
+            continue
+        bug_group_folder_count += 1
+
+        if "extracted_rule.json" not in files:
+            continue
+
+        extracted_rule_path = os.path.join(root, "extracted_rule.json")
+        try:
+            with open(extracted_rule_path, "r", encoding="utf-8") as f:
+                rule = json.load(f)
+        except OSError:
+            continue
+        except json.JSONDecodeError:
+            continue
+
+        all_rules.append(
+            {
+                "bug_group": os.path.relpath(root, source_root),
+                "merged_tree_path": extracted_rule_path.replace("\\", "/"),
+                "rule": rule,
+            }
+        )
+
+    os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
+    with open(output_json_path, "w", encoding="utf-8") as f:
+        json.dump({"rules": all_rules}, f, indent=2)
+
+    print(f"Found {bug_group_folder_count} bug-group folders.")
+    return output_json_path, [entry["rule"] for entry in all_rules]
 
 
 def item_add(item, amount=1, summary_path=DEFAULT_RUN_SUMMARY_PATH):
