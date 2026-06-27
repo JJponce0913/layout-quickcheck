@@ -69,22 +69,26 @@ modes:
 - **No weights:** uses equal/default CSS-property selection weights while
   retaining automatic minimization and grouping.
 
-For paper accurate results 
+For paper-accurate results, use the `--max-minutes` values shown below. The
+runner stops once that total runtime is reached.
 
 ### Chromium with weights and sorting
 
 Writes results to `bug_reports/chromium-sort/`.
 
 ```bash
-python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-chromium.json
+python src/lqc_selenium/runner.py --max-minutes 60 --config-file config/artifact-configs/change-chromium.json
 ```
 
 ### Chromium with weights and no sorting
 
 Writes results to `bug_reports/chromium-no-sort/`.
 
+This configuration was not used in the paper evaluation, so it has no
+paper-defined duration.
+
 ```bash
-python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-chromium-no-sort.json --no-sort
+python src/lqc_selenium/runner.py --config-file config/artifact-configs/change-chromium-no-sort.json --no-sort
 ```
 
 ### Chromium without weights
@@ -92,7 +96,7 @@ python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-
 Writes results to `bug_reports/chromium-no-weights/`.
 
 ```bash
-python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-chromium-no-weights.json
+python src/lqc_selenium/runner.py --max-minutes 60 --config-file config/artifact-configs/change-chromium-no-weights.json
 ```
 
 ### Firefox with weights and sorting
@@ -100,7 +104,7 @@ python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-
 Writes results to `bug_reports/firefox-sort/`.
 
 ```bash
-python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-firefox.json
+python src/lqc_selenium/runner.py --max-minutes 540 --config-file config/artifact-configs/change-firefox.json
 ```
 
 ### Firefox with weights and no sorting
@@ -108,7 +112,7 @@ python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-
 Writes results to `bug_reports/firefox-no-sort/`.
 
 ```bash
-python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-firefox-no-sort.json --no-sort
+python src/lqc_selenium/runner.py --max-minutes 540 --config-file config/artifact-configs/change-firefox-no-sort.json --no-sort
 ```
 
 ### Firefox without weights
@@ -116,7 +120,7 @@ python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-
 Writes results to `bug_reports/firefox-no-weights/`.
 
 ```bash
-python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-firefox-no-weights.json
+python src/lqc_selenium/runner.py --max-minutes 60 --config-file config/artifact-configs/change-firefox-no-weights.json
 ```
 
 Use `--bug-limit N` to stop after finding `N` bugs. Run the following command

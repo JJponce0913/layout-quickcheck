@@ -398,8 +398,12 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--test-limit", help="quit after running this many tests", type=int, default=0)
     parser.add_argument("-l", "--crash-limit", help="quit after crashing this many times", type=int, default=1)
     parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
+    parser.add_argument("--max-minutes", help="quit after this many total runtime minutes", type=float)
     parser.add_argument("--no-sort", help="save bugs without sorting or grouping them", action="store_true")
     args = parser.parse_args()
+
+    if args.max_minutes is not None and args.max_minutes <= 0:
+        parser.error("--max-minutes must be greater than zero")
     
     # Initialize Config
     print(f"Using config file {args.config_file}")
@@ -417,7 +421,10 @@ if __name__ == "__main__":
             f"{counter.num_tests} tests, {counter.num_error} bugs."
         )
 
-    while counter.should_continue():
+    while counter.should_continue() and (
+        args.max_minutes is None
+        or counter.getRuntimeSeconds() < args.max_minutes * 60
+    ):
         try:
             find_bugs(counter, sort_enabled=not args.no_sort)
         except Exception:
