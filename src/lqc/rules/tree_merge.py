@@ -34,19 +34,17 @@ class TextNode:
         return f"TextNode(text={self.text})"
 
 def _merge_dicts(d1, d2):
-    keys = set(d1.keys()) | set(d2.keys())
+    keys = set(d1.keys()) & set(d2.keys())
     out = {}
 
     for k in keys:
-        if k not in d1 or k not in d2:
-            out[k] = "diff"
-            continue
-
         v1 = d1[k]
         v2 = d2[k]
 
         if isinstance(v1, dict) and isinstance(v2, dict):
-            out[k] = _merge_dicts(v1, v2)
+            merged = _merge_dicts(v1, v2)
+            if merged:
+                out[k] = merged
         elif v1 == v2:
             out[k] = v1
         else:

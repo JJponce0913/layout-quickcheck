@@ -3,18 +3,22 @@
 from datetime import datetime
 import json
 import os
+from time import sleep
 
 
 DEFAULT_RUN_SUMMARY_PATH = os.path.join(
     "bug_reports", "tester", "run_summary.json"
 )
 BUG_SNAPSHOT_INTERVAL = 10
-RUNTIME_SECONDS_SNAPSHOT_INTERVAL = 1000
+RUNTIME_SECONDS_SNAPSHOT_INTERVAL = 60
+SUMMARY_WRITE_RETRIES = 20
+SUMMARY_WRITE_RETRY_SECONDS = 0.25
 
 NUMERIC_SUMMARY_KEYS = {
     "tests_run",
     "passed",
     "bugs_found",
+    "success_rate",
     "cant_reproduce",
     "bugs_with_no_modified_styles",
     "crashes",
@@ -37,6 +41,7 @@ def _default_summary(summary_path=DEFAULT_RUN_SUMMARY_PATH):
         "tests_run": 0,
         "passed": 0,
         "bugs_found": 0,
+        "success_rate": 0.0,
         "cant_reproduce": 0,
         "bugs_with_no_modified_styles": 0,
         "crashes": 0,
@@ -53,6 +58,13 @@ def _default_summary(summary_path=DEFAULT_RUN_SUMMARY_PATH):
     }
 
 
+def _with_computed_fields(summary):
+    tests_run = int(summary.get("tests_run", 0) or 0)
+    bugs_found = int(summary.get("bugs_found", 0) or 0)
+    summary["success_rate"] = round(bugs_found / tests_run, 6) if tests_run else 0.0
+    return summary
+
+
 def read_run_summary(summary_path=DEFAULT_RUN_SUMMARY_PATH):
     if not os.path.isfile(summary_path):
         return _default_summary(summary_path)
@@ -65,7 +77,7 @@ def read_run_summary(summary_path=DEFAULT_RUN_SUMMARY_PATH):
 
     summary = _default_summary(summary_path)
     summary.update(data if isinstance(data, dict) else {})
-    return summary
+    return _with_computed_fields(summary)
 
 
 def _write_summary_snapshot_once(payload, summary_path, snapshot_name):
@@ -73,8 +85,19 @@ def _write_summary_snapshot_once(payload, summary_path, snapshot_name):
     if os.path.exists(snapshot_path):
         return
 
-    with open(snapshot_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+    _write_json_with_retries(snapshot_path, payload)
+
+
+def _write_json_with_retries(path, payload):
+    for attempt in range(SUMMARY_WRITE_RETRIES):
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+            return
+        except PermissionError:
+            if attempt == SUMMARY_WRITE_RETRIES - 1:
+                raise
+            sleep(SUMMARY_WRITE_RETRY_SECONDS)
 
 
 def _write_threshold_snapshots(payload, summary_path):
@@ -108,10 +131,10 @@ def write_run_summary(summary, summary_path=DEFAULT_RUN_SUMMARY_PATH):
     payload.update(summary if isinstance(summary, dict) else {})
     payload["updated_at"] = datetime.now().isoformat()
     payload["target_root"] = os.path.abspath(os.path.dirname(summary_path))
+    _with_computed_fields(payload)
 
     os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+    _write_json_with_retries(summary_path, payload)
     _write_threshold_snapshots(payload, summary_path)
 
     return summary_path

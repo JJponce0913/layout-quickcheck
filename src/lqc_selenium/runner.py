@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 import os
 import pickle
+import random
 import sys
 from time import time
 import traceback
@@ -20,12 +21,19 @@ from lqc_selenium.report.bug_report_helper import save_bug_report
 from lqc_selenium.selenium_harness.layout_tester import test_combination
 from lqc_selenium.variants.variant_tester import test_variants
 from lqc_selenium.variants.variants import TargetBrowser, getTargetVariant
-from lqc_selenium.api import write_run_summary as write_run_summary_file
-from lqc.rules.rule_engine import sort_single_bug
+from lqc_selenium.api import (
+    read_run_summary,
+    write_run_summary as write_run_summary_file,
+)
+from lqc.rules.rule_engine import group_minified_bug_with_instances, sort_single_bug
 
 
 def get_sort_repo_dir():
     return FileConfig().bug_report_file_dir
+
+
+def get_safe_dir():
+    return os.path.join(get_sort_repo_dir(), "safe")
 
 
 def write_run_summary(counter, target_root=None):
@@ -59,6 +67,7 @@ def write_run_summary(counter, target_root=None):
         "tests_run": counter.num_tests,
         "passed": counter.num_successful,
         "bugs_found": counter.num_error,
+        "success_rate": round(counter.num_error / counter.num_tests, 6) if counter.num_tests else 0.0,
         "cant_reproduce": counter.num_cant_reproduce,
         "bugs_with_no_modified_styles": counter.num_no_mod_styles_bugs,
         "crashes": counter.num_crash,
@@ -77,6 +86,40 @@ def write_run_summary(counter, target_root=None):
     summary_path = os.path.join(target_root, "run_summary.json")
     write_run_summary_file(summary, summary_path=summary_path)
     return summary_path
+
+
+def restore_counter(counter, target_root=None):
+    """Restore cumulative run statistics from an existing run summary."""
+    if target_root is None:
+        target_root = get_sort_repo_dir()
+
+    summary_path = os.path.join(target_root, "run_summary.json")
+    if not os.path.isfile(summary_path):
+        return False
+
+    summary = read_run_summary(summary_path)
+    int_fields = {
+        "tests_run": "num_tests",
+        "passed": "num_successful",
+        "bugs_found": "num_error",
+        "cant_reproduce": "num_cant_reproduce",
+        "bugs_with_no_modified_styles": "num_no_mod_styles_bugs",
+        "crashes": "num_crash",
+    }
+    float_fields = {
+        "minify_seconds": "total_minify_seconds",
+        "sorting_seconds": "total_sorting_seconds",
+        "true_minification_seconds": "total_true_minification_seconds",
+    }
+
+    for summary_key, counter_field in int_fields.items():
+        setattr(counter, counter_field, max(0, int(summary.get(summary_key, 0) or 0)))
+    for summary_key, counter_field in float_fields.items():
+        setattr(counter, counter_field, max(0.0, float(summary.get(summary_key, 0) or 0)))
+
+    counter.initial_crash_count = counter.num_crash
+    counter.started_at_epoch -= max(0.0, float(summary.get("runtime_seconds", 0) or 0))
+    return True
 
 
 def extract_bug_group_rules_to_json(
@@ -135,19 +178,37 @@ def extract_bug_group_rules_to_json(
 
 
 
-def minify(target_browser, run_subject):
-    prerun_subject = run_subject
-    sort_started_at = time()
-    path,shouldSkip,rule_name = sort_single_bug(
-        base_dir=get_sort_repo_dir(),
-        run_subject=run_subject,
-        safe_dir="bug_reports/safe",
-    )
-    sorting_elapsed_seconds = time() - sort_started_at
-    print(f"Sorting time: {sorting_elapsed_seconds:.2f}s")
+def minify(target_browser, run_subject, sort_enabled=True):
+    if sort_enabled:
+        sort_started_at = time()
+        try:
+            path,shouldSkip,rule_name = sort_single_bug(
+                base_dir=get_sort_repo_dir(),
+                run_subject=run_subject,
+                safe_dir=get_safe_dir(),
+            )
+        except RuntimeError as exc:
+            path = os.path.join(
+                get_sort_repo_dir(),
+                f"bug-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}",
+            )
+            shouldSkip = False
+            rule_name = None
+            print(f"Sorting skipped: {exc}")
+        sorting_elapsed_seconds = time() - sort_started_at
+        print(f"Sorting time: {sorting_elapsed_seconds:.2f}s")
+    else:
+        path = os.path.join(
+            get_sort_repo_dir(),
+            f"bug-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000,9999)}",
+        )
+        shouldSkip = False
+        rule_name = None
+        sorting_elapsed_seconds = 0.0
+        print("Sorting disabled")
     print(f"Matching rule folder: {path}")
     
-    #Skipe minimization if shouldSkip is True
+    # Skip minimization if shouldSkip is True
     if shouldSkip:
         true_minification_started_at = time()
         run_result, _ = test_combination(target_browser.getDriver(), run_subject)
@@ -155,7 +216,6 @@ def minify(target_browser, run_subject):
         return (
             run_subject,
             run_result,
-            prerun_subject,
             path,
             shouldSkip,
             rule_name,
@@ -183,10 +243,29 @@ def minify(target_browser, run_subject):
 
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
     true_minification_elapsed_seconds = time() - true_minification_started_at
+
+    has_modified_styles = (
+        run_result.type != BugType.LAYOUT
+        or len(run_subject.modified_styles.map) > 0
+    )
+    if sort_enabled and run_result.isBug() and has_modified_styles:
+        post_sort_started_at = time()
+        try:
+            grouped_path = group_minified_bug_with_instances(
+                base_dir=get_sort_repo_dir(),
+                run_subject=run_subject,
+                safe_dir=get_safe_dir(),
+            )
+        except RuntimeError as exc:
+            grouped_path = None
+            print(f"Grouping skipped: {exc}")
+        sorting_elapsed_seconds += time() - post_sort_started_at
+        if grouped_path is not None:
+            path = grouped_path
+
     return (
         run_subject,
         run_result,
-        prerun_subject,
         path,
         shouldSkip,
         rule_name,
@@ -196,9 +275,9 @@ def minify(target_browser, run_subject):
 
 
 
-def find_bugs(counter):
+def find_bugs(counter, sort_enabled=True):
     target_browser = TargetBrowser()
-    safe_dir = "bug_reports/safe"
+    safe_dir = get_safe_dir()
     os.makedirs(safe_dir, exist_ok=True)
     write_run_summary(counter)
 
@@ -208,7 +287,7 @@ def find_bugs(counter):
             if name.endswith(".pkl")
         )
 
-    while safe_count() < 50 and counter.should_continue():
+    while safe_count() < 25 and counter.should_continue():
         run_subject = generate_run_subject()
         run_result, test_filepath = test_combination(
             target_browser.getDriver(),
@@ -217,7 +296,7 @@ def find_bugs(counter):
         )
 
         if not run_result.isBug():
-            print(f"Filling safe set: {safe_count() + 1}/50")
+            print(f"Filling safe set: {safe_count() + 1}/25")
             pickle_addr = os.path.join(safe_dir, f"safe_{int(time() * 1000)}.pkl")
             with open(pickle_addr, "wb") as f:
                 pickle.dump(run_subject, f)
@@ -242,18 +321,17 @@ def find_bugs(counter):
         else:
             # Stage 2 - Minifying Bug
             print("Bug found. Minifying...")
-            prerun_subject = run_subject
             minify_started_at = time()
             (
                 minified_run_subject,
                 minified_run_result,
-                prerun_subject,
                 path,
                 shouldSkip,
                 rule_name,
                 sorting_elapsed_seconds,
                 true_minification_elapsed_seconds,
-            ) = minify(target_browser, prerun_subject)
+            ) = minify(target_browser, run_subject, sort_enabled=sort_enabled)
+
             minify_elapsed_seconds = time() - minify_started_at
             counter.addMinifyTime(minify_elapsed_seconds)
             counter.addSortingTime(sorting_elapsed_seconds)
@@ -272,27 +350,13 @@ def find_bugs(counter):
             )
             print(f"Skip rule: {'skipped' if shouldSkip else 'not skipped'}")
             print(f"Rule name: {rule_name}")
-            # Save bug report that matches a rule 
-            if shouldSkip:
-                save_bug_report(
-                    variants=[],
-                    minified_run_subject=minified_run_subject,
-                    run_result=minified_run_result,
-                    original_filepath=test_filepath,
-                    prerun_subject=prerun_subject,
-                    path=path,
-                    shouldSkip=shouldSkip,
-                    rule_name=rule_name,
-                    sorting_seconds=sorting_elapsed_seconds,
-                    true_minification_seconds=true_minification_elapsed_seconds,
-                )
 
             # False Positive Detection
             if not minified_run_result.isBug():
-                print("Skipped: no repro after minify.")
+                print("False positive (could not reproduce)")
                 counter.incNoRepro()
             elif minified_run_result.type == BugType.LAYOUT and len(minified_run_subject.modified_styles.map) == 0:
-                print("Skipped: no modified styles after minify.")
+                print("Bug found with no modified styles")
                 counter.incNoMod()
 
             else:
@@ -306,7 +370,7 @@ def find_bugs(counter):
                     minified_run_subject,
                     minified_run_result,
                     test_filepath,
-                    prerun_subject,
+                    run_subject,
                     path=path,
                     shouldSkip=shouldSkip,
                     rule_name=rule_name,
@@ -334,6 +398,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--test-limit", help="quit after running this many tests", type=int, default=0)
     parser.add_argument("-l", "--crash-limit", help="quit after crashing this many times", type=int, default=1)
     parser.add_argument("-c", "--config-file", help="path to config file to use", type=str, default=DEFAULT_CONFIG_FILE)
+    parser.add_argument("--no-sort", help="save bugs without sorting or grouping them", action="store_true")
     args = parser.parse_args()
     
     # Initialize Config
@@ -346,10 +411,15 @@ if __name__ == "__main__":
     print(f"Using target variant \"{target_variant}\"")
 
     counter = Counter(bug_limit=args.bug_limit, test_limit=args.test_limit, crash_limit=args.crash_limit)
+    if restore_counter(counter):
+        print(
+            "Resumed cumulative statistics: "
+            f"{counter.num_tests} tests, {counter.num_error} bugs."
+        )
 
     while counter.should_continue():
         try:
-            find_bugs(counter)
+            find_bugs(counter, sort_enabled=not args.no_sort)
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             exc = {

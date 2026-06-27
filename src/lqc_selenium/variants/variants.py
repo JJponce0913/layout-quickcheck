@@ -2,6 +2,7 @@ import atexit
 import types
 import subprocess
 import shutil
+import os
 
 from lqc.config.config import Config
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -149,16 +150,16 @@ class FirefoxVariant(Variant):
         self.width = width
         self.height = height
         self.headless = headless
-        self.webdriver_path = webdriver_path or detectDriverPath("geckodriver", "Firefox webdriver_path")
+        if webdriver_path and os.path.isfile(webdriver_path):
+            self.webdriver_path = webdriver_path
+        else:
+            self.webdriver_path = detectDriverPath("geckodriver", "Firefox webdriver_path")
         self.binary_path = binary_path
 
     def __repr__(self):
         return "Firefox(headless={}, slow={}, width={}, height={}, options={})".format(self.headless, self.force_slow, self.width, self.height, self.options)
 
     def webdriver(self):
-        if not self.webdriver_path:
-            raise RuntimeError("Firefox Driver not found")
-
         firefox_options = FirefoxOptions()
 
         if self.headless:
@@ -169,7 +170,10 @@ class FirefoxVariant(Variant):
         if self.options:
             for property, value in self.options.items():
                 firefox_options.set_preference(property, value)
-        service = FirefoxService(executable_path=self.webdriver_path)
+        if self.webdriver_path:
+            service = FirefoxService(executable_path=self.webdriver_path)
+        else:
+            service = FirefoxService()
         firefox_webdriver = FirefoxWebDriver(service=service, options=firefox_options)
 
         firefox_webdriver.set_window_size(self.width, self.height)

@@ -14,7 +14,6 @@ from lqc.rules.rule_engine import (
     get_modified_styles,
     load_tree_start_pairs,
 )
-from lqc.rules.tree_merge import merge_trees
 
 """
 Incrementally merges tree structures from PKL files in a merge folder,

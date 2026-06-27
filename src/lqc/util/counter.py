@@ -10,6 +10,7 @@ class Counter():
         self.num_cant_reproduce = 0         # Number of tests that initially had a bug that was later unreproducable
         self.num_no_mod_styles_bugs = 0     # Number of tests that showed signs of a bug, but during the minify step, all changes were eliminated
         self.num_crash = 0                  # Number of times the program crashed
+        self.initial_crash_count = 0         # Crashes recorded before this process resumed
         self.started_at_epoch = time()      # Start time for this process run
         self.total_minify_seconds = 0.0     # Cumulative time spent in minify stage
         self.total_sorting_seconds = 0.0    # Cumulative time spent sorting/classifying bugs
@@ -69,7 +70,9 @@ class Counter():
         return max(0.0, time() - self.started_at_epoch)
 
     def should_continue(self):
-        if self.num_crash >= self.crash_limit:
+        # A resumed run retains historical crashes in its reported total, but only
+        # crashes from this process should trigger this process's crash limit.
+        if self.num_crash - self.initial_crash_count >= self.crash_limit:
             return False
         if self.bug_limit > 0 and self.num_error >= self.bug_limit:
             return False

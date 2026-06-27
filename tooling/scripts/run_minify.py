@@ -97,13 +97,25 @@ def run_minify_test(pickle_path, config_file=DEFAULT_CONFIG_FILE):
         print("Found bug. Minifying...")
         write_summary(summary_path, "initial finding: bug (non crash)")
 
-    minified_run_subject, minified_run_result, pre_pickle_path, should_skip = minify(
-        target_browser, run_subject
-    )
+    (
+        minified_run_subject,
+        minified_run_result,
+        path,
+        should_skip,
+        rule_name,
+        sorting_seconds,
+        true_minification_seconds,
+    ) = minify(target_browser, run_subject)
 
     write_summary(summary_path, "")
     write_summary(summary_path, "minify result")
-    write_summary(summary_path, f"pre_pickle: {pre_pickle_path}")
+    write_summary(summary_path, f"path: {path}")
+    write_summary(summary_path, f"matched_rule_name: {rule_name}")
+    write_summary(summary_path, f"sorting_seconds: {sorting_seconds:.3f}")
+    write_summary(
+        summary_path,
+        f"true_minification_seconds: {true_minification_seconds:.3f}",
+    )
     write_summary(
         summary_path,
         f"minified result type: {getattr(minified_run_result, 'type', None)}",
@@ -139,8 +151,12 @@ def run_minify_test(pickle_path, config_file=DEFAULT_CONFIG_FILE):
             minified_run_subject,
             minified_run_result,
             test_filepath,
-            pre_pickle_path,
+            run_subject,
             should_skip,
+            path=path,
+            rule_name=rule_name,
+            sorting_seconds=sorting_seconds,
+            true_minification_seconds=true_minification_seconds,
         )
         print(url)
         write_summary(summary_path, f"bug report url: {url}")
