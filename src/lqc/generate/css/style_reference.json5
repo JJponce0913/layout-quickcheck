@@ -5020,7 +5020,7 @@
       affected_by_all: false,
       style_builder_template: "empty",
     },
-    // TODO(hjkim3323@gmail.com): Remove -internal-font-size-delta.
+    
     // fontSizeDelta execCommand does not need separate CSS property.
     {
       name: "-internal-font-size-delta",

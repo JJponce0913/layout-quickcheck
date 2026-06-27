@@ -34,7 +34,7 @@ What happens instead?
 - The measurements from #1 and #2 don't match. This is likely an Under-Invalidation bug.
 
 
-This bug is generated from Layout QuickCheck (https://github.com/nathand8/layout-quickcheck). 
+
 Internal reference '${props.data.id}'. 
 
 Feel free to contact for more details on Layout QuickCheck or to offer suggestions on more effective bug reporting.

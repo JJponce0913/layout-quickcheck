@@ -1,45 +1,261 @@
 ![LQC logo](logo_100px_width.png)
 
-# Browser Layout Testing - QuickCheck
+# Layout QuickCheck
 
-This is a tool that uses randomized testing to find under-invalidation
-bugs in web browsers. It's already found a lot of bugs in Chrome
-(~~[1137427](https://bugs.chromium.org/p/chromium/issues/detail?id=1137427)~~,
-~~[1166887](https://bugs.chromium.org/p/chromium/issues/detail?id=1166887)~~,
-~~[1189755](https://bugs.chromium.org/p/chromium/issues/detail?id=1189755)~~,
-[1189762](https://bugs.chromium.org/p/chromium/issues/detail?id=1189762),
-~~[1190220](https://bugs.chromium.org/p/chromium/issues/detail?id=1190220)~~,
-[1219641](https://bugs.chromium.org/p/chromium/issues/detail?id=1219641),
-~~[1224721](https://bugs.chromium.org/p/chromium/issues/detail?id=1224721)~~,
-and
-[1229681](https://bugs.chromium.org/p/chromium/issues/detail?id=1229681))
-and Firefox
-([1721719](https://bugzilla.mozilla.org/show_bug.cgi?id=1721719),
-[1724982](https://bugzilla.mozilla.org/show_bug.cgi?id=1724982),
-[1724991](https://bugzilla.mozilla.org/show_bug.cgi?id=1724991),
-[1733276](https://bugzilla.mozilla.org/show_bug.cgi?id=1733276),
-[1735376](https://bugzilla.mozilla.org/show_bug.cgi?id=1735376),
-~~[1735931](https://bugzilla.mozilla.org/show_bug.cgi?id=1735931)~~,
-~~[1748891](https://bugzilla.mozilla.org/show_bug.cgi?id=1748891)~~
-linked to metabug
-[1724999](https://bugzilla.mozilla.org/show_bug.cgi?id=1724999)).
-As of writing, sifting through bugs and preparing bug reports is the
-most time-intensive part of this process.
+Layout QuickCheck generates randomized web pages and checks browsers for layout
+differences. Run all commands below from the repository root.
 
-# Running the Project
-You can run the project in selenium. [See the docs here](docs/SELENIUM.md)
-Or with Mozilla's Fuzzing Framework, Grizzly. [See the docs here](docs/GRIZZLY.md)
+## 1. Set up
 
-# Architecture Diagram
+Requirements:
 
-![Architecture Diagram](architecture_diagram.png)
+- Python 3
+- Firefox
+- [geckodriver](https://github.com/mozilla/geckodriver/releases) available on
+  `PATH`
+- Google Chrome
+- [ChromeDriver](https://googlechromelabs.github.io/chrome-for-testing/)
+  available on `PATH`
 
+Create a virtual environment and install the project:
 
+```bash
+python -m venv .venv
+```
 
-# Legal
+Activate it on Linux or macOS:
 
-Licensed for use through the [MIT License](MIT-LICENSE).
+```bash
+source .venv/bin/activate
+```
 
-# More
+Or activate it on Windows PowerShell:
 
-For more, please go to [selenium](docs/SELENIUM.md) or [grizzly](docs/GRIZZLY.md).
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Then install the dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+Verify that Firefox and geckodriver are available:
+
+```bash
+firefox --version
+geckodriver --version
+google-chrome --version
+chromedriver --version
+```
+
+If a driver is installed but cannot be found through `PATH`, set
+`webdriver_path` in each configuration you use to the driver's full path. For
+example, use `C:\WebDriver\chromedriver.exe` for Chromium or
+`C:\WebDriver\geckodriver.exe` for Firefox. The artifact configurations are in
+`config/artifact-configs/`.
+
+## 2. Run an experiment
+
+The six artifact configurations compare two browsers and three processing
+modes:
+
+- **Sort:** uses CSS-property weights and automatically minimizes and groups
+  detected bugs.
+- **No sort:** uses the same CSS-property weights, but `--no-sort` disables bug
+  grouping.
+- **No weights:** uses equal/default CSS-property selection weights while
+  retaining automatic minimization and grouping.
+
+For paper accurate results 
+
+### Chromium with weights and sorting
+
+Writes results to `bug_reports/chromium-sort/`.
+
+```bash
+python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-chromium.json
+```
+
+### Chromium with weights and no sorting
+
+Writes results to `bug_reports/chromium-no-sort/`.
+
+```bash
+python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-chromium-no-sort.json --no-sort
+```
+
+### Chromium without weights
+
+Writes results to `bug_reports/chromium-no-weights/`.
+
+```bash
+python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-chromium-no-weights.json
+```
+
+### Firefox with weights and sorting
+
+Writes results to `bug_reports/firefox-sort/`.
+
+```bash
+python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-firefox.json
+```
+
+### Firefox with weights and no sorting
+
+Writes results to `bug_reports/firefox-no-sort/`.
+
+```bash
+python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-firefox-no-sort.json --no-sort
+```
+
+### Firefox without weights
+
+Writes results to `bug_reports/firefox-no-weights/`.
+
+```bash
+python src/lqc_selenium/runner.py  --config-file config/artifact-configs/change-firefox-no-weights.json
+```
+
+Use `--bug-limit N` to stop after finding `N` bugs. Run the following command
+for every available option:
+
+```bash
+python src/lqc_selenium/runner.py --help
+```
+
+## 3. Generate graphs
+
+Results in these directories:
+
+```text
+bug_reports/
+├── chromium-no-weights/
+├── chromium-no-sort/
+├── chromium-sort/
+├── firefox-no-sort/
+├── firefox-no-weights/
+└── firefox-sort/
+```
+
+Run the following commands from the repository root in PowerShell. Generated
+figures and the results table are written to `generated artifacts/`.
+
+### Cumulative bugs over time by configuration
+
+```powershell
+python artifact_generators\figures\cumulative_bugs_over_time_by_config.py `
+  "bug_reports\chromium-no-weights" `
+  "bug_reports\chromium-sort" `
+  "bug_reports\firefox-no-weights" `
+  "bug_reports\firefox-sort" `
+  --output "generated artifacts\cumulative_bugs_detected_over_time_by_configuration.png" `
+  --max-minutes 60
+```
+
+### RQ1 bug-discovery results table
+
+```powershell
+python artifact_generators\tables\create_rq1_results_table.py `
+  "bug_reports\chromium-no-weights" `
+  "bug_reports\chromium-sort" `
+  "bug_reports\firefox-no-weights" `
+  "bug_reports\firefox-sort" `
+  --output "generated artifacts\table_3_rq1_results.png"
+```
+
+### Post-processing time over time
+
+```powershell
+python artifact_generators\figures\post_processing_time_over_time.py `
+  "bug_reports\firefox-sort" `
+  "bug_reports\firefox-no-sort" `
+  --output "generated artifacts\combined_minimization_and_clustering_time_over_time.png"
+```
+
+### CSS style elements by report type
+
+```powershell
+python artifact_generators\figures\css_style_elements_by_report_type.py `
+  "bug_reports\firefox-sort" `
+  --output "generated artifacts\firefox_style_elements.png"
+```
+
+### Firefox bug-group sizes
+
+```powershell
+python artifact_generators\figures\firefox_bug_group_sizes.py `
+  "bug_reports\firefox-sort" `
+  --output "generated artifacts\firefox_bug_group_sizes.png"
+```
+
+### Bug groups and single bugs over time
+
+```powershell
+python artifact_generators\figures\bug_groups_and_single_bugs_over_time.py `
+  "bug_reports\firefox-sort" `
+  --output "generated artifacts\bug_groups_and_single_bugs_over_time.png"
+```
+
+Time-series input directories must contain `run_summary_<seconds>s.json`
+snapshots. The RQ1 table reads `run_summary_3600s.json`. The CSS-style and
+bug-group-size generators read the `bug-group-*` and `bug-*` directories in
+the supplied Firefox results.
+
+## 4. Other tasks
+
+### Change the configuration
+
+Preset configurations are in `config/`. Copy the closest preset, edit the
+copy, and pass it to the runner:
+
+```bash
+python src/lqc_selenium/runner.py  --config-file path/to/config.json
+```
+
+Configuration controls output paths, browser variants, and CSS-property
+weights. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
+### Re-run the minimizer
+
+Use a saved run-subject pickle from a bug report:
+
+```bash
+python tooling/scripts/run_minify.py --pickle path/to/run_subject.pkl --config config/preset-firefox.config.json
+```
+
+Debugging output is written under `bug_reports/debug_minify_runs/`.
+
+### Cluster saved bugs
+
+Cluster bug pickles while using a separate set of known-safe pickles to reject
+overly broad rules:
+
+```bash
+python tooling/scripts/sort_bug.py --pickles-dir path/to/bugs --pickle-name minified_run_subject.pkl --safe-dir path/to/safe-pickles --output-dir clustered
+```
+
+The clustered results are written to `bug_reports/clustered/`.
+
+### Inspect a bug
+
+Each bug-report directory contains:
+
+- `minified_bug.html`: the smallest reproduced test case
+- `original_bug.html`: the original generated test case
+- `data.json`: browser variants, styles, and detected differences
+- `minified_run_subject.pkl`: serialized input for minimization and clustering
+
+Open `minified_bug.html` in a browser. In the developer console, run
+`checkForBug()` to repeat the check or `simpleRecreate()` to print the layout
+differences.
+
+Additional Selenium instructions are in
+[docs/SELENIUM.md](docs/SELENIUM.md). Grizzly instructions are in
+[docs/GRIZZLY.md](docs/GRIZZLY.md).
+
+## License
+
+See [MIT-LICENSE](MIT-LICENSE).

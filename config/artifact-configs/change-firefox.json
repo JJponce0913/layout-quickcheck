@@ -1,0 +1,19 @@
+{
+  "webdriver-path-note": "Leave webdriver_path empty to find geckodriver on PATH. If detection fails, enter the full path to geckodriver, for example \\WebDriver\\geckodriver.exe.",
+  "paths": {
+    "bug-reports-directory": "./bug_reports/firefox-sort",
+    "tmp-files-directory": "./tmp_generated_files"
+  },
+  "variants": [
+    {
+      "type": "firefox",
+      "webdriver_path": "",
+      "binary_path": "C:/Program Files/Mozilla Firefox/firefox.exe"
+    }
+  ],
+  "style-weights": {
+    "content-visibility": 0,
+    "writing-mode": 0,
+    "display": 100
+  }
+}

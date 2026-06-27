@@ -1,0 +1,31 @@
+{
+    "webdriver-path-note": "Leave webdriver_path empty to find chromedriver on PATH. If detection fails, enter the full path to chromedriver, for example \\WebDriver\\chromedriver.exe.",
+    "paths": {
+        "bug-reports-directory": "./bug_reports/chromium-no-weights",
+        "tmp-files-directory": "./tmp_generated_files"
+    },
+
+    "variants": [
+        {"type": "chrome",
+         "target": true,
+         "webdriver_path": "",
+         "args": ["--enable-blink-features=LayoutNGGrid"]},
+        {"type": "chrome",
+         "width": 500, "height": 500,
+         "webdriver_path": "",
+         "args": ["--enable-blink-features=LayoutNGGrid"]},
+        {"type": "chrome",
+         "width": 2400, "height": 2400,
+         "webdriver_path": "",
+         "args": ["--enable-blink-features=LayoutNGGrid"]},
+        {"type": "chrome",
+         "webdriver_path": ""},
+        {"type": "chrome",
+         "webdriver_path": "",
+         "args": ["--enable-blink-features=LayoutNGTable"]}
+    ],
+
+        "style-weights": {
+            
+    }
+}

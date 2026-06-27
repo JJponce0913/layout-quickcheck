@@ -1,0 +1,58 @@
+Run these commands from the repository root in PowerShell.
+
+Figure: Cumulative bugs over time by configuration
+
+python artifact_generators\figures\cumulative_bugs_over_time_by_config.py `
+  "D:\bug\postfix\chromium-no-weights" `
+  "D:\bug\postfix\chromium-sort" `
+  "D:\bug\postfix\firefox-no-weights" `
+  "D:\bug\postfix\firefox-sort" `
+  --output "generated artifacts\cumulative_bugs_detected_over_time_by_configuration.png" `
+  --max-minutes 60
+
+
+Table: RQ1 bug-discovery results
+
+python artifact_generators\tables\create_rq1_results_table.py `
+  "D:\bug\postfix\chromium-no-weights" `
+  "D:\bug\postfix\chromium-sort" `
+  "D:\bug\postfix\firefox-no-weights" `
+  "D:\bug\postfix\firefox-sort" `
+  --output "generated artifacts\table_3_rq1_results.png"
+
+
+Figure: Post-processing time over time
+
+python artifact_generators\figures\post_processing_time_over_time.py `
+  "D:\bug\postfix\firefox-sort" `
+  "D:\bug\postfix\firefox-no-sort" `
+  --output "generated artifacts\combined_minimization_and_clustering_time_over_time.png"
+
+
+Figure: CSS style elements by report type
+
+python artifact_generators\figures\css_style_elements_by_report_type.py `
+  "D:\bug\postfix\firefox-sort" `
+  --output "generated artifacts\firefox_style_elements.png"
+
+
+Figure: Firefox bug-group sizes
+
+python artifact_generators\figures\firefox_bug_group_sizes.py `
+  "D:\bug\postfix\firefox-sort" `
+  --output "generated artifacts\firefox_bug_group_sizes.png"
+
+
+Figure: Bug groups and single bugs over time
+
+python artifact_generators\figures\bug_groups_and_single_bugs_over_time.py `
+  "D:\bug\postfix\firefox-sort" `
+  --output "generated artifacts\bug_groups_and_single_bugs_over_time.png"
+
+
+Replace D:\bug\postfix with the directory containing the experiment results.
+
+Each result directory used by a time-series command must contain
+run_summary_<seconds>s.json snapshot files. The RQ1 table specifically reads
+run_summary_3600s.json. The remaining commands read bug-group-* and bug-*
+directories from the supplied Firefox results directory.

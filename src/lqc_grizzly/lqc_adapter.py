@@ -16,8 +16,8 @@ from lqc.minify.minify_test_file import MinifyStepFactory
 from lqc.model.run_result import RunResultLayoutBug
 from lqc.model.run_subject import RunSubject
 
-__author__ = "Tyson Smith"
-__credits__ = ["Tyson Smith", "Nathan Davis"]
+__author__ = "Anonymous"
+__credits__ = ["Anonymous"]
 
 JS_BOOTSTRAP = """
 window.addEventListener("load", test_bug_and_report);
