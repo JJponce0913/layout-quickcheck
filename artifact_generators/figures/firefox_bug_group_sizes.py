@@ -14,6 +14,8 @@ Optional parameters:
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -23,24 +25,47 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "figures" / "firefox_bug_group_sizes.png"
 
 
-def collect_groups(directory: Path) -> list[tuple[str, int]]:
+def report_existed_at(report: Path, cutoff: datetime | None) -> bool:
+    if cutoff is None:
+        return True
+    data = json.loads((report / "data.json").read_text(encoding="utf-8"))
+    return datetime.fromisoformat(data["datetime"]) <= cutoff
+
+
+def collect_groups(
+    directory: Path, snapshot_seconds: int | None = None
+) -> list[tuple[str, int]]:
     if not directory.is_dir():
         raise SystemExit(f"Layout QuickCheck directory not found: {directory}")
+    cutoff = None
+    allowed_groups = None
+    allowed_singles = None
+    if snapshot_seconds is not None:
+        snapshot_path = directory / f"run_summary_{snapshot_seconds}s.json"
+        try:
+            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            cutoff = datetime.fromisoformat(snapshot["updated_at"])
+            allowed_groups = set(snapshot["bug_groups"])
+            allowed_singles = set(snapshot["single_bugs"])
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+            raise SystemExit(f"Invalid Layout QuickCheck snapshot: {snapshot_path}") from error
     groups = [
         (
             group.name,
             sum(
                 child.is_dir() and child.name.startswith("bug-")
+                and report_existed_at(child, cutoff)
                 for child in group.iterdir()
             ),
         )
         for group in directory.glob("bug-group-*")
-        if group.is_dir()
+        if group.is_dir() and (allowed_groups is None or group.name in allowed_groups)
     ]
     single_count = sum(
         child.is_dir()
         and child.name.startswith("bug-")
         and not child.name.startswith("bug-group-")
+        and (allowed_singles is None or child.name in allowed_singles)
         for child in directory.iterdir()
     )
     if single_count:
@@ -54,8 +79,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("lqc_dir", type=Path)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--snapshot-seconds", type=int)
     arguments = parser.parse_args()
-    groups = collect_groups(arguments.lqc_dir)
+    groups = collect_groups(arguments.lqc_dir, arguments.snapshot_seconds)
     names, counts = zip(*groups)
 
     figure, axis = plt.subplots(figsize=(max(12, len(groups) * 0.32), 7), dpi=140)

@@ -10,6 +10,8 @@ Optional parameters:
     --output PATH
         Output PNG path. Defaults to
         ``figures/bug_groups_and_single_bugs_over_time.png``.
+    --max-minutes MINUTES
+        Ignore snapshots after this execution time.
 """
 
 from __future__ import annotations
@@ -27,7 +29,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "figures" / "bug_groups_and_single_bugs_over_time.png"
 
 
-def load_snapshots(directory: Path) -> list[tuple[float, int, int]]:
+def load_snapshots(
+    directory: Path, max_minutes: float | None = None
+) -> list[tuple[float, int, int]]:
     snapshots = []
     for path in directory.glob("run_summary_*s.json"):
         match = SNAPSHOT_PATTERN.match(path.name)
@@ -35,9 +39,12 @@ def load_snapshots(directory: Path) -> list[tuple[float, int, int]]:
             continue
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            elapsed_minutes = int(match.group(1)) / 60
+            if max_minutes is not None and elapsed_minutes > max_minutes:
+                continue
             snapshots.append(
                 (
-                    int(match.group(1)) / 3600,
+                    elapsed_minutes / 60,
                     int(data["bug_group_count"]),
                     int(data["single_bug_count"]),
                 )
@@ -53,8 +60,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("lqc_dir", type=Path)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--max-minutes", type=float)
     arguments = parser.parse_args()
-    snapshots = load_snapshots(arguments.lqc_dir)
+    snapshots = load_snapshots(arguments.lqc_dir, arguments.max_minutes)
     elapsed_hours, group_counts, single_counts = zip(*snapshots)
 
     figure, axis = plt.subplots(figsize=(11, 6), dpi=140)

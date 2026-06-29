@@ -1,8 +1,9 @@
 """Create a standalone image of the RQ1 bug-discovery results table.
 
 This artifact generator is independent of the thesis source. It takes exactly
-four Layout QuickCheck result directories, calculates the 60-minute metrics,
-and writes a PNG that can be viewed directly.
+four Layout QuickCheck result directories, calculates metrics at a common
+snapshot, and writes a PNG that can be viewed directly. It uses the 60-minute
+snapshot by default.
 
 Usage:
     python create_rq1_results_table.py \
@@ -22,20 +23,23 @@ Positional parameters:
 Optional parameters:
     --output PATH
         Output PNG path. Defaults to ``figures/table_3_rq1_results.png``.
+    --highest-common-snapshot
+        Use the latest snapshot timestamp present in all four directories.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Mapping
 
 import matplotlib.pyplot as plt
 
 
-SNAPSHOT_SECONDS = 3_600
-SNAPSHOT_FILENAME = f"run_summary_{SNAPSHOT_SECONDS}s.json"
+DEFAULT_SNAPSHOT_SECONDS = 3_600
+SNAPSHOT_PATTERN = re.compile(r"^run_summary_(\d+)s\.json$")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "figures" / "table_3_rq1_results.png"
 
@@ -54,11 +58,35 @@ def parse_arguments() -> argparse.Namespace:
         default=DEFAULT_OUTPUT,
         help=f"Output PNG path (default: {DEFAULT_OUTPUT}).",
     )
+    parser.add_argument(
+        "--highest-common-snapshot",
+        action="store_true",
+        help="Use the latest snapshot timestamp present in all input directories.",
+    )
     return parser.parse_args()
 
 
-def load_metrics(run_dir: Path) -> tuple[str, str, str]:
-    snapshot_path = run_dir / SNAPSHOT_FILENAME
+def available_snapshot_seconds(run_dir: Path) -> set[int]:
+    snapshots = set()
+    for path in run_dir.glob("run_summary_*s.json"):
+        match = SNAPSHOT_PATTERN.match(path.name)
+        if match:
+            snapshots.add(int(match.group(1)))
+    return snapshots
+
+
+def highest_common_snapshot(run_dirs: list[Path]) -> int:
+    common_snapshots = set.intersection(
+        *(available_snapshot_seconds(run_dir) for run_dir in run_dirs)
+    )
+    if not common_snapshots:
+        directories = ", ".join(str(run_dir) for run_dir in run_dirs)
+        raise SystemExit(f"No common Layout QuickCheck snapshot found in: {directories}")
+    return max(common_snapshots)
+
+
+def load_metrics(run_dir: Path, snapshot_seconds: int) -> tuple[str, str, str]:
+    snapshot_path = run_dir / f"run_summary_{snapshot_seconds}s.json"
     try:
         summary: Mapping[str, object] = json.loads(
             snapshot_path.read_text(encoding="utf-8")
@@ -73,7 +101,7 @@ def load_metrics(run_dir: Path) -> tuple[str, str, str]:
     if tests_run <= 0 or bugs_found < 0:
         raise SystemExit(f"Invalid counts in {snapshot_path}")
 
-    speed = tests_run / (SNAPSHOT_SECONDS / 60)
+    speed = tests_run / (snapshot_seconds / 60)
     rate = bugs_found / tests_run * 100
     return f"{speed:.1f}", str(bugs_found), f"{rate:.3f}%"
 
@@ -83,6 +111,7 @@ def create_table(
     chromium_weights: tuple[str, str, str],
     firefox_no_weights: tuple[str, str, str],
     firefox_weights: tuple[str, str, str],
+    snapshot_seconds: int,
     output: Path,
 ) -> None:
     columns = [
@@ -130,8 +159,8 @@ def create_table(
     figure.text(
         0.5,
         0.06,
-        "Runs use a 60-minute execution window. Speed is tests per minute; "
-        "rate is bugs divided by executed tests.",
+        f"Runs use a {snapshot_seconds / 60:g}-minute execution window. "
+        "Speed is tests per minute; rate is bugs divided by executed tests.",
         ha="center",
         fontsize=11,
         style="italic",
@@ -146,11 +175,20 @@ def create_table(
 
 def main() -> None:
     arguments = parse_arguments()
+    run_dirs = [
+        arguments.chromium_no_weights_dir,
+        arguments.chromium_weights_dir,
+        arguments.firefox_no_weights_dir,
+        arguments.firefox_weights_dir,
+    ]
+    snapshot_seconds = (
+        highest_common_snapshot(run_dirs)
+        if arguments.highest_common_snapshot
+        else DEFAULT_SNAPSHOT_SECONDS
+    )
     create_table(
-        load_metrics(arguments.chromium_no_weights_dir),
-        load_metrics(arguments.chromium_weights_dir),
-        load_metrics(arguments.firefox_no_weights_dir),
-        load_metrics(arguments.firefox_weights_dir),
+        *(load_metrics(run_dir, snapshot_seconds) for run_dir in run_dirs),
+        snapshot_seconds,
         arguments.output,
     )
 

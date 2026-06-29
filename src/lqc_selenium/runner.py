@@ -28,6 +28,18 @@ from lqc_selenium.api import (
 from lqc.rules.rule_engine import group_minified_bug_with_instances, sort_single_bug
 
 
+class RunDeadlineReached(Exception):
+    """Stop fuzzing at the runtime limit without recording a crash."""
+
+
+def enforce_run_deadline(counter, max_runtime_seconds):
+    if (
+        max_runtime_seconds is not None
+        and counter.getRuntimeSeconds() >= max_runtime_seconds
+    ):
+        raise RunDeadlineReached
+
+
 def get_sort_repo_dir():
     return FileConfig().bug_report_file_dir
 
@@ -178,7 +190,18 @@ def extract_bug_group_rules_to_json(
 
 
 
-def minify(target_browser, run_subject, sort_enabled=True):
+def minify(
+    target_browser,
+    run_subject,
+    sort_enabled=True,
+    counter=None,
+    max_runtime_seconds=None,
+):
+    def enforce_deadline():
+        if counter is not None:
+            enforce_run_deadline(counter, max_runtime_seconds)
+
+    enforce_deadline()
     if sort_enabled:
         sort_started_at = time()
         try:
@@ -197,6 +220,7 @@ def minify(target_browser, run_subject, sort_enabled=True):
             print(f"Sorting skipped: {exc}")
         sorting_elapsed_seconds = time() - sort_started_at
         print(f"Sorting time: {sorting_elapsed_seconds:.2f}s")
+        enforce_deadline()
     else:
         path = os.path.join(
             get_sort_repo_dir(),
@@ -227,6 +251,7 @@ def minify(target_browser, run_subject, sort_enabled=True):
     # Keep applying minimization steps until no more are available
     true_minification_started_at = time()
     while True:
+        enforce_deadline()
         # Get the next candidate minimized version of run_subject
         proposed_run_subject = stepsFactory.next_minimization_step(run_subject)
         # If there are no more steps, exit the loop
@@ -236,12 +261,15 @@ def minify(target_browser, run_subject, sort_enabled=True):
         
         # Test the proposed minimized subject in the target browser
         run_result, *_ = test_combination(target_browser.getDriver(), proposed_run_subject)
+        enforce_deadline()
 
         # If the minimized subject still triggers the bug, accept it as the new subject
         if run_result.isBug():
             run_subject = proposed_run_subject
 
+    enforce_deadline()
     run_result, _ = test_combination(target_browser.getDriver(), run_subject)
+    enforce_deadline()
     true_minification_elapsed_seconds = time() - true_minification_started_at
 
     has_modified_styles = (
@@ -275,7 +303,7 @@ def minify(target_browser, run_subject, sort_enabled=True):
 
 
 
-def find_bugs(counter, sort_enabled=True):
+def find_bugs(counter, sort_enabled=True, max_runtime_seconds=None):
     target_browser = TargetBrowser()
     safe_dir = get_safe_dir()
     os.makedirs(safe_dir, exist_ok=True)
@@ -288,12 +316,14 @@ def find_bugs(counter, sort_enabled=True):
         )
 
     while safe_count() < 25 and counter.should_continue():
+        enforce_run_deadline(counter, max_runtime_seconds)
         run_subject = generate_run_subject()
         run_result, test_filepath = test_combination(
             target_browser.getDriver(),
             run_subject,
             keep_file=True
         )
+        enforce_run_deadline(counter, max_runtime_seconds)
 
         if not run_result.isBug():
             print(f"Filling safe set: {safe_count() + 1}/25")
@@ -311,10 +341,12 @@ def find_bugs(counter, sort_enabled=True):
     target_browser = TargetBrowser()
 
     while counter.should_continue():
+        enforce_run_deadline(counter, max_runtime_seconds)
 
         # Stage 1 - Generate & Test
         run_subject = generate_run_subject()
         (run_result, test_filepath) = test_combination(target_browser.getDriver(), run_subject, keep_file=True)
+        enforce_run_deadline(counter, max_runtime_seconds)
 
         if not run_result.isBug():
             counter.incSuccess()
@@ -330,7 +362,13 @@ def find_bugs(counter, sort_enabled=True):
                 rule_name,
                 sorting_elapsed_seconds,
                 true_minification_elapsed_seconds,
-            ) = minify(target_browser, run_subject, sort_enabled=sort_enabled)
+            ) = minify(
+                target_browser,
+                run_subject,
+                sort_enabled=sort_enabled,
+                counter=counter,
+                max_runtime_seconds=max_runtime_seconds,
+            )
 
             minify_elapsed_seconds = time() - minify_started_at
             counter.addMinifyTime(minify_elapsed_seconds)
@@ -421,12 +459,20 @@ if __name__ == "__main__":
             f"{counter.num_tests} tests, {counter.num_error} bugs."
         )
 
-    while counter.should_continue() and (
-        args.max_minutes is None
-        or counter.getRuntimeSeconds() < args.max_minutes * 60
-    ):
+    max_runtime_seconds = (
+        args.max_minutes * 60 if args.max_minutes is not None else None
+    )
+    while counter.should_continue():
         try:
-            find_bugs(counter, sort_enabled=not args.no_sort)
+            enforce_run_deadline(counter, max_runtime_seconds)
+            find_bugs(
+                counter,
+                sort_enabled=not args.no_sort,
+                max_runtime_seconds=max_runtime_seconds,
+            )
+        except RunDeadlineReached:
+            print(f"Maximum runtime of {args.max_minutes:g} minutes reached; stopping.")
+            break
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             exc = {

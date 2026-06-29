@@ -147,11 +147,23 @@ bug_reports/
 Run the following commands from the repository root in PowerShell. Generated
 figures and the results table are written to `generated artifacts/`.
 
-To generate all figures and the RQ1 results table at once, run:
+To generate all figures without a time cap and build the RQ1 results table from
+the latest snapshot timestamp shared by all four configurations, run:
 
 ```bash
 make graphs
 ```
+
+To generate the paper versions, run:
+
+```bash
+make graphs-paper
+```
+
+This uses the paper's snapshots: 60 minutes for the cumulative RQ1 graph and
+results table, and 540 minutes for the Firefox post-processing and bug-group
+timelines. The CSS-style and bug-group-size figures also use the Firefox
+540-minute snapshot, excluding reports created later.
 
 Or run individual generators with the commands below.
 
@@ -212,7 +224,9 @@ python artifact_generators\figures\bug_groups_and_single_bugs_over_time.py `
 ```
 
 Time-series input directories must contain `run_summary_<seconds>s.json`
-snapshots. The RQ1 table reads `run_summary_3600s.json`. The CSS-style and
+snapshots. The RQ1 table reads `run_summary_3600s.json` by default; pass
+`--highest-common-snapshot` to use the latest timestamp present in all four
+input directories. The CSS-style and
 bug-group-size generators read the `bug-group-*` and `bug-*` directories in
 the supplied Firefox results.
 

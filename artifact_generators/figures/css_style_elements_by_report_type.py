@@ -15,6 +15,7 @@ Optional parameters:
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 import re
 from pathlib import Path
@@ -27,11 +28,18 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "figures" / "firefox_style_elements.png"
 
 
-def bug_directories(parent: Path) -> list[Path]:
+def bug_directories(parent: Path, cutoff: datetime | None = None) -> list[Path]:
     return sorted(
         path
         for path in parent.glob("bug-*")
         if path.is_dir() and not path.name.startswith("bug-group-")
+        and (
+            cutoff is None
+            or datetime.fromisoformat(
+                json.loads((path / "data.json").read_text(encoding="utf-8"))["datetime"]
+            )
+            <= cutoff
+        )
     )
 
 
@@ -52,9 +60,25 @@ def rule_count(path: Path) -> int:
     return len(rule.get("base_style", [])) + len(rule.get("modified_style", []))
 
 
-def collect_counts(directory: Path) -> tuple[int, int, int]:
-    groups = sorted(path for path in directory.glob("bug-group-*") if path.is_dir())
-    bugs = [bug for group in groups for bug in bug_directories(group)]
+def collect_counts(
+    directory: Path, snapshot_seconds: int | None = None
+) -> tuple[int, int, int]:
+    cutoff = None
+    allowed_groups = None
+    if snapshot_seconds is not None:
+        snapshot = json.loads(
+            (directory / f"run_summary_{snapshot_seconds}s.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        cutoff = datetime.fromisoformat(snapshot["updated_at"])
+        allowed_groups = set(snapshot["bug_groups"])
+    groups = sorted(
+        path
+        for path in directory.glob("bug-group-*")
+        if path.is_dir() and (allowed_groups is None or path.name in allowed_groups)
+    )
+    bugs = [bug for group in groups for bug in bug_directories(group, cutoff)]
     originals = [bug / "original_bug.html" for bug in bugs if (bug / "original_bug.html").is_file()]
     minimized = [path for bug in bugs if (path := minified_file(bug)) is not None]
     if not originals or not minimized:
@@ -62,7 +86,7 @@ def collect_counts(directory: Path) -> tuple[int, int, int]:
 
     clustered = 0
     for group in groups:
-        representatives = bug_directories(group)
+        representatives = bug_directories(group, cutoff)
         rule = group / "extracted_rule.json"
         if not representatives or not rule.is_file():
             raise SystemExit(f"Incomplete Layout QuickCheck bug group: {group}")
@@ -77,10 +101,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("lqc_dir", type=Path)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--snapshot-seconds", type=int)
     arguments = parser.parse_args()
     try:
-        counts = collect_counts(arguments.lqc_dir)
-    except (OSError, json.JSONDecodeError, TypeError, ValueError) as error:
+        counts = collect_counts(arguments.lqc_dir, arguments.snapshot_seconds)
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
         raise SystemExit(f"Cannot read Layout QuickCheck results: {error}") from error
 
     figure, axis = plt.subplots(figsize=(7, 5), dpi=140)
