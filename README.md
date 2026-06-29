@@ -147,6 +147,14 @@ bug_reports/
 Run the following commands from the repository root in PowerShell. Generated
 figures and the results table are written to `generated artifacts/`.
 
+To generate all figures and the RQ1 results table at once, run:
+
+```bash
+make graphs
+```
+
+Or run individual generators with the commands below.
+
 ### Cumulative bugs over time by configuration
 
 ```powershell
