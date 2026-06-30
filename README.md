@@ -17,6 +17,19 @@ Requirements:
 - [ChromeDriver](https://googlechromelabs.github.io/chrome-for-testing/)
   available on `PATH`
 
+Chrome and ChromeDriver must have matching versions. On Linux, download the
+ChromeDriver release that exactly matches the installed Google Chrome version:
+
+```sh
+version=$(google-chrome --version | awk '{print $3}')
+echo "Installed Google Chrome version: $version"
+wget "https://storage.googleapis.com/chrome-for-testing-public/${version}/linux64/chromedriver-linux64.zip"
+unzip chromedriver-linux64.zip
+```
+
+Then move `chromedriver-linux64/chromedriver` to a directory on `PATH`, or set
+its full path in the configuration as described below.
+
 Create a virtual environment and install the project:
 
 ```bash
@@ -54,6 +67,12 @@ If a driver is installed but cannot be found through `PATH`, set
 example, use `C:\WebDriver\chromedriver.exe` for Chromium or
 `C:\WebDriver\geckodriver.exe` for Firefox. The artifact configurations are in
 `config/artifact-configs/`.
+
+Path separators depend on the operating system: Windows conventionally uses
+backslashes (`\`), while Linux and macOS use forward slashes (`/`). Inside a
+JSON configuration, either use forward slashes for a Windows path
+(`C:/WebDriver/chromedriver.exe`) or escape each backslash
+(`C:\\WebDriver\\chromedriver.exe`).
 
 ## 2. Run an experiment
 
