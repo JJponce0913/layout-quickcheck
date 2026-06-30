@@ -1,0 +1,4 @@
+{
+  "chrome": "C:/WebDriver/chromedriver.exe",
+  "firefox": "C:/WebDriver/geckodriver.exe"
+}

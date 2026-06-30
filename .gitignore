@@ -17,6 +17,7 @@ config/*
 !config/preset-*
 !config/artifact-configs/
 !config/artifact-configs/*.json
+config/artifact-configs/webdrivers.json
 
 # Default directory for grizzly results
 results/*

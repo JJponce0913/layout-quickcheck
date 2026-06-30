@@ -67,6 +67,21 @@ modes:
 - **No weights:** uses equal/default CSS-property selection weights while
   retaining automatic minimization and grouping.
 
+Set your machine-specific WebDriver paths in
+`config/artifact-configs/webdrivers.json`:
+
+```json
+{
+  "chrome": "C:/WebDriver/chromedriver.exe",
+  "firefox": "C:/WebDriver/geckodriver.exe"
+}
+```
+
+These paths are used by every configuration whose `webdriver_path` is empty
+or omitted. A non-empty `webdriver_path` in an individual configuration still
+overrides the shared value. Empty shared values continue to use WebDrivers
+found on `PATH`.
+
 For paper-accurate results, use the `--max-minutes` values shown below. The
 runner stops once that total runtime is reached.
 

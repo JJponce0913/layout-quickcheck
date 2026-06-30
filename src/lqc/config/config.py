@@ -1,11 +1,29 @@
 import json
+from pathlib import Path
 
 DEFAULT_STYLE_WEIGHT = 10
 DEFAULT_STYLE_VALUE_WEIGHT = 10
+DEFAULT_WEBDRIVER_CONFIG = (
+    Path(__file__).resolve().parents[3]
+    / "config"
+    / "artifact-configs"
+    / "webdrivers.json"
+)
 
 def parse_config(config_path):
     with open(config_path, 'r') as f:
-        return json.loads(f.read())
+        config = json.loads(f.read())
+
+    if DEFAULT_WEBDRIVER_CONFIG.is_file():
+        with DEFAULT_WEBDRIVER_CONFIG.open(encoding="utf-8") as f:
+            webdriver_paths = json.load(f)
+        for variant in config.get("variants", []):
+            if not variant.get("webdriver_path"):
+                driver_path = webdriver_paths.get(variant.get("type"), "")
+                if driver_path:
+                    variant["webdriver_path"] = driver_path
+
+    return config
 
 def _weightToProbability(weight):
     return weight/100
