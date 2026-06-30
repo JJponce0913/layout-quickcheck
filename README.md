@@ -42,12 +42,10 @@ python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-Verify that Firefox and geckodriver are available:
+Verify that chromedriver and geckodriver are available:
 
 ```bash
-firefox --version
 geckodriver --version
-google-chrome --version
 chromedriver --version
 ```
 
@@ -123,8 +121,7 @@ Writes results to `bug_reports/firefox-no-weights/`.
 python src/lqc_selenium/runner.py --max-minutes 60 --config-file config/artifact-configs/change-firefox-no-weights.json
 ```
 
-Use `--bug-limit N` to stop after finding `N` bugs. Run the following command
-for every available option:
+Run the following command for every available option:
 
 ```bash
 python src/lqc_selenium/runner.py --help

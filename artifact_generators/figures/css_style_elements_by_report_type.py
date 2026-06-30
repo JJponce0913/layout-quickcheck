@@ -80,8 +80,14 @@ def collect_counts(
     )
     bugs = [bug for group in groups for bug in bug_directories(group, cutoff)]
     originals = [bug / "original_bug.html" for bug in bugs if (bug / "original_bug.html").is_file()]
-    minimized = [path for bug in bugs if (path := minified_file(bug)) is not None]
-    if not originals or not minimized:
+    minimized = [
+        path
+        for bug in bugs
+        if (path := minified_file(bug)) is not None
+        and (original := bug / "original_bug.html").is_file()
+        and html_count(path) < html_count(original)
+    ]
+    if not originals:
         raise SystemExit(f"No complete grouped reports found in {directory}")
 
     clustered = 0
