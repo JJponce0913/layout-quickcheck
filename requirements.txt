@@ -5,6 +5,7 @@ itsdangerous==1.1.0
 Jinja2==2.11.3
 lorem==0.1.1
 MarkupSafe==1.1.1
+matplotlib==3.10.9
 psutil==5.8.0
 selenium==4.31.0
 six==1.15.0
